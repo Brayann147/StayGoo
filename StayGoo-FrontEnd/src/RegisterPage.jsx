@@ -5,6 +5,41 @@ import footerImage from "./assets/footer.jpg";
 import { registerUser } from "./api";
 import "./RegisterPage.css";
 
+const t = {
+  auth: {
+    errorPasswordMismatch: "Las contraseñas no coinciden",
+    errorAdultOnly: "Debes ser mayor de edad para registrarte",
+    errorTermsRequired: "Debes aceptar los términos y políticas",
+    backToStaygoo: "Volver a StayGoo",
+    registerWelcomeTitle: "Bienvenido a StayGoo",
+    registerWelcomeText: "Regístrate para encontrar los mejores lugares o para convertirte en anfitrión.",
+    registerTitle: "Crear cuenta",
+    registerSubtitle: "Rellena los datos a continuación para registrarte.",
+    personalInfo: "Información Personal",
+    firstName: "Nombre",
+    lastName: "Apellido",
+    birthDate: "Fecha de nacimiento",
+    countryRegion: "País/Región",
+    phone: "Teléfono",
+    accountData: "Datos de la cuenta",
+    emailAddress: "Correo electrónico",
+    password: "Contraseña",
+    minCharsPlaceholder: "Mínimo 8 caracteres",
+    showPasswordAria: "Mostrar contraseña",
+    confirmPassword: "Confirmar contraseña",
+    repeatPasswordPlaceholder: "Repite tu contraseña",
+    userType: "Tipo de usuario",
+    traveler: "Viajero",
+    host: "Anfitrión",
+    acceptTerms: "Acepto los Términos y Condiciones",
+    acceptPrivacy: "Acepto las Políticas de Privacidad",
+    acceptMarketing: "Acepto recibir correos de marketing",
+    registerSubmit: "Registrarse",
+    alreadyHaveAccount: "¿Ya tienes cuenta?",
+    loginLink: "Inicia sesión"
+  }
+};
+
 function RegisterPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
