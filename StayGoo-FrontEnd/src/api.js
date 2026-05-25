@@ -3,11 +3,18 @@
  * Todos los servicios que hablan con el servidor van aquí.
  */
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const DEFAULT_API_BASE_URL = import.meta.env.PROD
+  ? "https://staygoo.onrender.com/api"
+  : "http://localhost:3000/api";
 
-export const isApiMisconfigured =
-  import.meta.env.PROD && !import.meta.env.VITE_API_URL;
+function normalizeApiBaseUrl(rawUrl) {
+  const baseUrl = String(rawUrl || DEFAULT_API_BASE_URL).trim().replace(/\/+$/, "");
+  return baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`;
+}
+
+export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL);
+
+export const isApiMisconfigured = false;
 
 // ── Helper genérico para hacer peticiones ──────────────────────────────────────
 async function request(endpoint, options = {}) {
