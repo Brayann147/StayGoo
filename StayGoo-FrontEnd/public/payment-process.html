@@ -542,6 +542,25 @@
       const visualHero = document.getElementById("visualHero");
       let selectedMethodId = null;
 
+      const normalizeApiBaseUrl = (rawUrl) => {
+        const baseUrl = String(rawUrl || "").trim().replace(/\/+$/, "");
+        return baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`;
+      };
+
+      const getApiBaseUrl = () => {
+        const storedUrl = window.localStorage.getItem("staygooApiBaseUrl");
+        if (storedUrl) {
+          return normalizeApiBaseUrl(storedUrl);
+        }
+
+        const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+        return isLocalHost
+          ? "http://localhost:3000/api"
+          : "https://staygoo.onrender.com/api";
+      };
+
+      const API_BASE_URL = getApiBaseUrl();
+
       const normalizeSavedMethods = (rawMethods) => {
         if (!Array.isArray(rawMethods)) {
           return [];
@@ -632,7 +651,7 @@
                checkOutDate.setDate(checkOutDate.getDate() + (Number(summaryNights.textContent) || 5));
             }
             
-            await fetch("http://localhost:3000/api/bookings", {
+            await fetch(`${API_BASE_URL}/bookings`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -731,7 +750,7 @@
           const nights = parsed.nights || 5;
           const total = parsed.total || 1400000;
           const image = parsed.image || "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80";
-          const returnUrl = parsed.data ? `/stay-detail.html?data=${encodeURIComponent(JSON.stringify(parsed.data))}` : "/";
+          const returnUrl = parsed.data ? `/stay-detail?data=${encodeURIComponent(JSON.stringify(parsed.data))}` : "/";
 
           stayTitle.textContent = title;
           stayMeta.textContent = `${location} · ${price}`;
