@@ -238,7 +238,7 @@ export async function uploadHousingImage(idHousing, file, isPanorama) {
 
   const token = localStorage.getItem("staygooToken");
 
-  const response = await fetch(`${BASE_URL}/housings/${idHousing}/images`, {
+  const response = await fetch(`${API_BASE_URL}/housings/${idHousing}/images`, {
     method: "POST",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
