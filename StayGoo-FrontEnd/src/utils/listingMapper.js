@@ -2,7 +2,8 @@ const categoryMap = {
   Apartamento: "apartments",
   Cabaña: "cabins",
   Casa: "countryside",
-  Habitación: "citystays",
+  Habitación: "hotels",
+  Hotel: "hotels",
 };
 
 const DEFAULT_IMAGE =
@@ -17,13 +18,18 @@ export function mapHousingToListing(item, index = 0) {
   const firstImage =
     normalImages.length > 0 ? normalImages[0].image_url : DEFAULT_IMAGE;
 
+  const city = item.city || "Ciudad Desconocida";
+  const address = item.address || "";
+
   return {
     id: item.id_housing.toString(),
     title: item.name || "Sin título",
     category: mappedCategory,
-    location: item.address
-      ? `${item.address}, ${item.city}`
-      : item.city || "Ciudad Desconocida",
+    city,
+    address,
+    description: item.description || "",
+    status: item.status || "available",
+    location: address ? `${address}, ${city}` : city,
     maxGuests: item.capacity || 2,
     price: `$${item.price_per_night || 0}`,
     rating: 4.8,
@@ -38,5 +44,8 @@ export function mapHousingToListing(item, index = 0) {
 }
 
 export function mapHousingsToListings(housings = []) {
-  return housings.map((item, index) => mapHousingToListing(item, index));
+  const list = Array.isArray(housings) ? housings : housings?.data ?? [];
+  return list
+    .filter((item) => (item.status || "available") === "available")
+    .map((item, index) => mapHousingToListing(item, index));
 }

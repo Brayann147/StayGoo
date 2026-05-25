@@ -122,6 +122,7 @@ function App() {
     activeCategoryIndex,
     heroFilters,
     filterError,
+    listingsError,
     t,
     categories,
     guestOptions,
@@ -362,6 +363,7 @@ function App() {
         ))}
       </div>
       {filterError ? <p className="filterError">{filterError}</p> : null}
+      {listingsError ? <p className="filterError">{listingsError}</p> : null}
 
       {featuredListings.length > 0 ? (
         <>

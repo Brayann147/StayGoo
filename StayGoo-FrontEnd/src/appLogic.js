@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { getHousings } from "./api";
 import { mapHousingsToListings } from "./utils/listingMapper";
+import { matchesSearchQuery } from "./utils/searchUtils";
 
 const spanishText = {
   navbar: {
@@ -44,6 +45,7 @@ export function useAppLogic() {
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(null);
   const [search, setSearch] = useState("");
   const [apiListings, setApiListings] = useState([]);
+  const [listingsError, setListingsError] = useState("");
   const [heroFilters, setHeroFilters] = useState({
     destination: "",
     checkIn: null,
@@ -156,10 +158,15 @@ export function useAppLogic() {
   useEffect(() => {
     async function fetchListings() {
       try {
+        setListingsError("");
         const data = await getHousings();
         setApiListings(mapHousingsToListings(data));
       } catch (err) {
         console.error("Error cargando listings para App:", err);
+        setListingsError(
+          err.message || "No pudimos cargar los alojamientos. Intenta de nuevo."
+        );
+        setApiListings([]);
       }
     }
     fetchListings();
@@ -170,35 +177,46 @@ export function useAppLogic() {
       activeCategoryIndex === null ? null : categoryKeys[activeCategoryIndex] || null;
 
     return apiListings.filter((listing) => {
-      const quickText = search.trim().toLowerCase();
-      const destination = appliedFilters.destination.trim().toLowerCase();
+      const quickText = search.trim();
+      const destination = appliedFilters.destination.trim();
       const guests = Number(appliedFilters.guests || 0);
 
-      const matchesQuickSearch =
-        !quickText ||
-        listing.title.toLowerCase().includes(quickText) ||
-        listing.location.toLowerCase().includes(quickText);
-
-      const matchesDestination =
-        !destination ||
-        listing.title.toLowerCase().includes(destination) ||
-        listing.location.toLowerCase().includes(destination);
-
+      const matchesQuickSearch = matchesSearchQuery(listing, quickText);
+      const matchesDestination = matchesSearchQuery(listing, destination);
       const matchesGuests = !guests || listing.maxGuests >= guests;
-      const matchesCategory = !activeCategoryKey || activeCategoryKey === "all" || listing.category === activeCategoryKey;
+      const matchesCategory =
+        !activeCategoryKey ||
+        activeCategoryKey === "all" ||
+        listing.category === activeCategoryKey ||
+        (activeCategoryKey === "citystays" &&
+          ["apartments", "hotels"].includes(listing.category));
 
-      return matchesQuickSearch && matchesDestination && matchesGuests && matchesCategory;
+      return (
+        matchesQuickSearch &&
+        matchesDestination &&
+        matchesGuests &&
+        matchesCategory
+      );
     });
   }, [search, appliedFilters, activeCategoryIndex, categoryKeys, apiListings]);
 
-  const featuredListings = useMemo(
-    () => filtered.filter((listing) => listing.featured),
+  const displayListings = useMemo(
+    () =>
+      filtered.map((listing, index) => ({
+        ...listing,
+        featured: index < 3,
+      })),
     [filtered]
   );
 
+  const featuredListings = useMemo(
+    () => displayListings.filter((listing) => listing.featured),
+    [displayListings]
+  );
+
   const additionalListings = useMemo(
-    () => filtered.filter((listing) => !listing.featured),
-    [filtered]
+    () => displayListings.filter((listing) => !listing.featured),
+    [displayListings]
   );
 
   const handleHeroFilterChange = (field, value) => {
@@ -236,7 +254,9 @@ export function useAppLogic() {
       })
     );
 
-    window.open(`/stay-detail?data=${payload}`, "staygoo-detail-tab", "noopener,noreferrer");
+    const base = import.meta.env.BASE_URL || "/";
+    const detailPath = `${base.replace(/\/$/, "")}/stay-detail?data=${payload}`;
+    window.open(detailPath, "staygoo-detail-tab", "noopener,noreferrer");
   };
 
   return {
@@ -245,6 +265,7 @@ export function useAppLogic() {
     setSearch,
     heroFilters,
     filterError,
+    listingsError,
     t,
     categories,
     guestOptions,
