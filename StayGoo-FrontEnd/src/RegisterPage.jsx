@@ -27,6 +27,7 @@ const t = {
     password: "Contraseña",
     minCharsPlaceholder: "Mínimo 8 caracteres",
     passwordRequirementsTitle: "Tu contraseña debe incluir:",
+    passwordRequirements: "La contraseña no cumple los requisitos de seguridad.",
     passwordRequirementsList: [
       "Al menos 8 caracteres",
       "Una letra mayúscula",
@@ -49,6 +50,13 @@ const t = {
   }
 };
 
+function getDefaultPhoneLabel() {
+  const match = Array.isArray(phoneCodes)
+    ? phoneCodes.find((c) => c.code === "+57")
+    : null;
+  return match?.label || "Colombia (+57)";
+}
+
 function RegisterPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -62,7 +70,7 @@ function RegisterPage() {
     pais: "",
     telefono: "",
     phoneCode: "+57",
-    phoneCodeLabel: phoneCodes.find((c) => c.code === "+57")?.label || "+57",
+    phoneCodeLabel: getDefaultPhoneLabel(),
     customPhoneCode: "",
     email: "",
     password: "",
@@ -262,6 +270,12 @@ function RegisterPage() {
       </header>
 
       <main className="registerLayout">
+        <section className="registerWelcomePanel" aria-labelledby="register-welcome-title">
+          <p className="registerWelcomeEyebrow">UNETE A LA COMUNIDAD</p>
+          <h2 id="register-welcome-title">{t.auth.registerWelcomeTitle}</h2>
+          <p className="registerWelcomeText">{t.auth.registerWelcomeText}</p>
+        </section>
+
         <section className="registerFormPanel">
           <h1>{t.auth.registerTitle}</h1>
           <p className="registerSubtitle">{t.auth.registerSubtitle}</p>
