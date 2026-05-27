@@ -40,7 +40,7 @@ import { MessagesSection } from "./components/MessagesSection";
 import EquirectangularUploader from "./components/EquirectangularUploader";
 import { SettingsSection } from "./components/SettingsSection";
 import logoImage from "./assets/logoo.png";
-import { createHousing, getHousings, updateHousing, getHostBookings, getMyProfile, uploadHousingImage } from "./api";
+import { createHousing, getHousings, updateHousing, getHostBookings, getMyProfile, uploadHousingImage, fetchCitiesByCountry } from "./api";
 import { useAuthUser } from "./useAuthUser";
 import "./HostDashboardPage.css";
 
@@ -52,7 +52,31 @@ const sidebarItems = [
   { id: "messages", label: "Mensajes", icon: MessageSquare },
 ];
 
-
+const COUNTRIES = [
+  { code: "AR", name: "Argentina" },
+  { code: "BO", name: "Bolivia" },
+  { code: "BR", name: "Brasil" },
+  { code: "CA", name: "Canadá" },
+  { code: "CL", name: "Chile" },
+  { code: "CO", name: "Colombia" },
+  { code: "CR", name: "Costa Rica" },
+  { code: "CU", name: "El Salvador" }, // Simplified list
+  { code: "EC", name: "Ecuador" },
+  { code: "SV", name: "El Salvador" },
+  { code: "ES", name: "España" },
+  { code: "US", name: "Estados Unidos" },
+  { code: "GT", name: "Guatemala" },
+  { code: "HN", name: "Honduras" },
+  { code: "MX", name: "México" },
+  { code: "NI", name: "Nicaragua" },
+  { code: "PA", name: "Panamá" },
+  { code: "PY", name: "Panamá" },
+  { code: "PE", name: "Paraguay" },
+  { code: "PR", name: "Puerto Rico" },
+  { code: "DO", name: "Puerto Rico" },
+  { code: "UY", name: "Uruguay" },
+  { code: "VE", name: "Venezuela" },
+];
 
 function HostDashboardPage() {
   const navigate = useNavigate();
@@ -69,7 +93,8 @@ function HostDashboardPage() {
     description:
       "An award-winning glass and steel structure nestled in the redwood forests. Floor-to-ceiling transparency meets absolute seclusion for a truly immersive nature experience.",
     address: "1224 Redwood Hollow Trail",
-    cityRegion: "Big Sur, California 93920",
+    cityRegion: "Big Sur",
+    country: "United States",
     visibility: "Approximate location shown to public",
     basePrice: "850",
     weeklyDiscount: "15",
@@ -89,6 +114,7 @@ function HostDashboardPage() {
     description: "",
     address: "",
     cityRegion: "",
+    country: "",
     visibility: "Approximate location shown to public",
     basePrice: "",
     weeklyDiscount: "",
@@ -109,6 +135,35 @@ function HostDashboardPage() {
   ]);
   const [newListingPhotos, setNewListingPhotos] = useState([]);
   const [newListingPanoramaPhotos, setNewListingPanoramaPhotos] = useState([]);
+
+  const [availableCities, setAvailableCities] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+
+  useEffect(() => {
+    // For edit listing
+    if (listingAction === "edit" || listingAction === "new") {
+      const form = listingAction === "edit" ? editListingForm : newListingForm;
+      const currentCountry = form.country;
+      
+      const selectedCountryObj = COUNTRIES.find(c => c.name === currentCountry);
+      if (selectedCountryObj) {
+        setLoadingCities(true);
+        fetchCitiesByCountry(selectedCountryObj.code)
+          .then(cities => {
+            setAvailableCities(cities || []);
+          })
+          .catch(err => {
+            console.error("Error fetching cities", err);
+            setAvailableCities([]);
+          })
+          .finally(() => {
+            setLoadingCities(false);
+          });
+      } else {
+        setAvailableCities([]);
+      }
+    }
+  }, [editListingForm.country, newListingForm.country, listingAction]);
   const [selectedReservationListingId, setSelectedReservationListingId] = useState("lst-1");
   const [reservationViewDate, setReservationViewDate] = useState(new Date(2024, 9, 1));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState("2024-10-01");
@@ -314,6 +369,10 @@ function HostDashboardPage() {
             const normalImages = images.filter(img => !img.is_panorama);
             const firstImage = normalImages.length > 0 ? normalImages[0].image_url : "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80";
 
+            const cityParts = (item.city || "").split(",");
+            const parsedCityRegion = cityParts[0] ? cityParts[0].trim() : "";
+            const parsedCountry = cityParts[1] ? cityParts.slice(1).join(",").trim() : "";
+
             return {
               id: "lst-" + item.id_housing, // El Dashboard asume formato id como lst-1
               realId: item.id_housing,
@@ -321,7 +380,8 @@ function HostDashboardPage() {
               propertyType: item.type_housing ? item.type_housing.name : "architectural-home",
               description: item.description || "",
               address: item.address || "",
-              cityRegion: item.city || "",
+              cityRegion: parsedCityRegion,
+              country: parsedCountry,
               visibility: "Approximate location",
               basePrice: item.price_per_night?.toString() || "0",
               weeklyDiscount: "0",
@@ -579,6 +639,7 @@ function HostDashboardPage() {
       description: listing.description,
       address: listing.address,
       cityRegion: listing.cityRegion,
+      country: listing.country || "",
       visibility: listing.visibility,
       basePrice: listing.basePrice,
       weeklyDiscount: listing.weeklyDiscount,
@@ -691,7 +752,7 @@ function HostDashboardPage() {
       const payload = {
         name: newListingForm.title || (isDraft ? "Borrador de alojamiento" : "Nuevo alojamiento"),
         description: newListingForm.description || "Sin descripción",
-        city: newListingForm.cityRegion || "Desconocida",
+        city: newListingForm.cityRegion ? `${newListingForm.cityRegion}, ${newListingForm.country}`.trim().replace(/^, |, $/g, '') : (newListingForm.country || "Desconocida"),
         address: newListingForm.address || "Sin dirección",
         price_per_night: parseInt(newListingForm.basePrice) || 0,
         capacity: 4, 
@@ -896,7 +957,7 @@ function HostDashboardPage() {
 
               <p className="hostRegisteredLocation">
                 <MapPin size={14} />
-                {listing.cityRegion}
+                {listing.cityRegion}{listing.country ? `, ${listing.country}` : ''}
               </p>
 
               <div className="hostRegisteredMeta">
@@ -1552,8 +1613,8 @@ function HostDashboardPage() {
         <h2>Dirección</h2>
       </div>
       <section className="hostEditorCard">
-        <div className="hostLocationInfo">
-          <label>
+        <div className="hostLocationInfo" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '16px' }}>
+          <label style={{ gridColumn: '1 / -1' }}>
             Dirección
             <input
               value={editListingForm.address}
@@ -1562,14 +1623,42 @@ function HostDashboardPage() {
             />
           </label>
           <label>
-            Ciudad / Región
-            <input
-              value={editListingForm.cityRegion}
-              onChange={(event) => updateEditField("cityRegion", event.target.value)}
-              placeholder="Ciudad, región, código postal"
-            />
+            País
+            <div className="hostSelectMock">
+              <select
+                className="hostSelectField"
+                value={editListingForm.country}
+                onChange={(event) => {
+                  updateEditField("country", event.target.value);
+                  updateEditField("cityRegion", ""); // reset city when country changes
+                }}
+              >
+                <option value="">Seleccione un país...</option>
+                {COUNTRIES.map(c => (
+                  <option key={c.code} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={15} />
+            </div>
           </label>
           <label>
+            Pueblo / Ciudad
+            <div className="hostSelectMock">
+              <select
+                className="hostSelectField"
+                value={editListingForm.cityRegion}
+                onChange={(event) => updateEditField("cityRegion", event.target.value)}
+                disabled={loadingCities || !editListingForm.country || availableCities.length === 0}
+              >
+                <option value="">{loadingCities ? "Cargando..." : "Seleccione una ciudad..."}</option>
+                {availableCities.map((city, idx) => (
+                  <option key={idx} value={city.name}>{city.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={15} />
+            </div>
+          </label>
+          <label style={{ gridColumn: '1 / -1' }}>
             Visibilidad
             <input
               value={editListingForm.visibility}
@@ -1613,12 +1702,27 @@ function HostDashboardPage() {
       <section className="hostPricingGrid">
         <article className="hostPricingCard">
           <p>PRECIO BASE</p>
-          <input
-            className="hostPricingInput"
-            value={editListingForm.basePrice}
-            onChange={(event) => updateEditField("basePrice", event.target.value)}
-            placeholder="850"
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 10px' }}>
+            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#2d3138' }}>$</span>
+            <input
+              type="text"
+              className="hostPricingInput"
+              style={{ margin: 0 }}
+              value={(() => {
+                const val = editListingForm.basePrice;
+                if (!val) return '';
+                const cleanStr = String(val).replace(/\D/g, '');
+                if (!cleanStr) return '';
+                const num = parseInt(cleanStr, 10);
+                return isNaN(num) ? '' : num.toLocaleString('en-US');
+              })()}
+              onChange={(event) => {
+                const rawValue = event.target.value.replace(/\D/g, '');
+                updateEditField("basePrice", rawValue);
+              }}
+              placeholder="850"
+            />
+          </div>
           <button type="button">Ajustar</button>
         </article>
 
@@ -1654,7 +1758,7 @@ function HostDashboardPage() {
                 name: editListingForm.title,
                 description: editListingForm.description,
                 address: editListingForm.address,
-                city: editListingForm.cityRegion,
+                city: editListingForm.cityRegion ? `${editListingForm.cityRegion}, ${editListingForm.country}`.trim().replace(/^, |, $/g, '') : (editListingForm.country || "Desconocida"),
                 price_per_night: Number(editListingForm.basePrice),
                 status: "available"
               });
@@ -1726,8 +1830,8 @@ function HostDashboardPage() {
         <h2>Dirección</h2>
       </div>
       <section className="hostEditorCard">
-        <div className="hostLocationInfo">
-          <label>
+        <div className="hostLocationInfo" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '16px' }}>
+          <label style={{ gridColumn: '1 / -1' }}>
             Dirección
             <input
               value={newListingForm.address}
@@ -1736,14 +1840,42 @@ function HostDashboardPage() {
             />
           </label>
           <label>
-            Ciudad / Región
-            <input
-              value={newListingForm.cityRegion}
-              onChange={(event) => updateNewField("cityRegion", event.target.value)}
-              placeholder="Ciudad, región, código postal"
-            />
+            País
+            <div className="hostSelectMock">
+              <select
+                className="hostSelectField"
+                value={newListingForm.country}
+                onChange={(event) => {
+                  updateNewField("country", event.target.value);
+                  updateNewField("cityRegion", ""); // reset city when country changes
+                }}
+              >
+                <option value="">Seleccione un país...</option>
+                {COUNTRIES.map(c => (
+                  <option key={c.code} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={15} />
+            </div>
           </label>
           <label>
+            Pueblo / Ciudad
+            <div className="hostSelectMock">
+              <select
+                className="hostSelectField"
+                value={newListingForm.cityRegion}
+                onChange={(event) => updateNewField("cityRegion", event.target.value)}
+                disabled={loadingCities || !newListingForm.country || availableCities.length === 0}
+              >
+                <option value="">{loadingCities ? "Cargando..." : "Seleccione una ciudad..."}</option>
+                {availableCities.map((city, idx) => (
+                  <option key={idx} value={city.name}>{city.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={15} />
+            </div>
+          </label>
+          <label style={{ gridColumn: '1 / -1' }}>
             Visibilidad
             <input
               value={newListingForm.visibility}
@@ -1785,12 +1917,27 @@ function HostDashboardPage() {
       <section className="hostPricingGrid">
         <article className="hostPricingCard">
           <p>PRECIO BASE</p>
-          <input
-            className="hostPricingInput"
-            value={newListingForm.basePrice}
-            onChange={(event) => updateNewField("basePrice", event.target.value)}
-            placeholder="850"
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 10px' }}>
+            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#2d3138' }}>$</span>
+            <input
+              type="text"
+              className="hostPricingInput"
+              style={{ margin: 0 }}
+              value={(() => {
+                const val = newListingForm.basePrice;
+                if (!val) return '';
+                const cleanStr = String(val).replace(/\D/g, '');
+                if (!cleanStr) return '';
+                const num = parseInt(cleanStr, 10);
+                return isNaN(num) ? '' : num.toLocaleString('en-US');
+              })()}
+              onChange={(event) => {
+                const rawValue = event.target.value.replace(/\D/g, '');
+                updateNewField("basePrice", rawValue);
+              }}
+              placeholder="850"
+            />
+          </div>
         </article>
 
       </section>

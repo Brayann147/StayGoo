@@ -15,6 +15,7 @@ import reviewRoutes       from './src/routes/review.routes.js';
 import notificationRoutes from './src/routes/notification.routes.js';
 import messageRoutes      from './src/routes/message.routes.js';
 import documentsRoutes    from './src/routes/documents.routes.js';
+import citiesRoutes       from './src/routes/cities.routes.js';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use('/api/reviews',       reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages',      messageRoutes);
 app.use('/api/documents',     documentsRoutes);
+app.use('/api/cities',        citiesRoutes);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

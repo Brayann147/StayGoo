@@ -268,3 +268,11 @@ export async function uploadHousingImage(idHousing, file, isPanorama) {
   return data;
 }
 
+/**
+ * Obtener ciudades desde el backend usando la API de GeoNames
+ * @param {string} countryCode - Código ISO del país (ej. "CO", "MX", "US")
+ */
+export async function fetchCitiesByCountry(countryCode) {
+  return request(`/cities?country=${countryCode}`, { public: true });
+}
+
