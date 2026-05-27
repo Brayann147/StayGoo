@@ -251,7 +251,7 @@ function StayDetailPage() {
       checkOut: toIsoDate(checkOutDate)
     }));
 
-    window.open(`/payment-process.html?data=${paymentPayload}`, "staygoo-payment-tab", "noopener,noreferrer");
+    navigate(`/payment?data=${paymentPayload}`);
   };
 
   const setShareStatus = (label) => {

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from 'sweetalert2';
+import DualLoader from "./DualLoader";
 import {
   Bell,
   CreditCard,
@@ -110,7 +112,7 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
         await updateMyProfile({ name: formData.fullName, phone: formData.phone });
         
         setHasUnsavedChanges(false);
-        alert("Cambios guardados con éxito");
+        Swal.fire({title: 'Éxito', text: 'Cambios guardados con éxito', icon: 'success'});
     } catch (error) {
         console.error(error);
     } finally {
@@ -204,6 +206,7 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
 
   return (
     <section className="settingsPage">
+      {isSaving && <DualLoader overlay />}
       <aside className="settingsNavPanel">
         <div className="settingsSidebarTop">
           <div>

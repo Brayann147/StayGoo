@@ -10,6 +10,7 @@ import LoaderPreviewPage from "./LoaderPreviewPage.jsx";
 import MemberDashboardPage from "./MemberDashboardPage.jsx";
 import HostDashboardPage from "./HostDashboardPage.jsx";
 import StayDetailPage from "./StayDetailPage.jsx";
+import PaymentPage from "./PaymentPage.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -30,6 +31,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/member-dashboard" element={<MemberDashboardPage />} />
           <Route path="/host-dashboard" element={<HostDashboardPage />} />
           <Route path="/stay-detail" element={<StayDetailPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </RouteErrorBoundary>

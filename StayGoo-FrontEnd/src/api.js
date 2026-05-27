@@ -2,6 +2,7 @@
  * api.js — Capa de comunicación con el Backend de StayGo
  * Todos los servicios que hablan con el servidor van aquí.
  */
+import Swal from 'sweetalert2';
 
 const DEFAULT_API_BASE_URL = import.meta.env.PROD
   ? "https://staygoo.onrender.com/api"
@@ -54,8 +55,13 @@ async function request(endpoint, options = {}) {
     if (response.status === 401 && data.error === 'Token inválido o expirado.') {
       localStorage.removeItem("staygooToken");
       localStorage.removeItem("staygooSession");
-      alert("Tu sesión ha caducado por seguridad. Por favor, inicia sesión nuevamente para continuar.");
-      window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
+      Swal.fire({
+        title: 'Error',
+        text: 'Tu sesión ha caducado por seguridad. Por favor, inicia sesión nuevamente para continuar.',
+        icon: 'error'
+      }).then(() => {
+        window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
+      });
     }
     throw new Error(data.error || data.message || "Error en el servidor");
   }
@@ -217,8 +223,8 @@ export async function getNotifications() {
 /**
  * Obtener mensajes del usuario autenticado
  */
-export async function getMessages() {
-  return request("/messages");
+export async function getMessages(id_user) {
+  return request(`/messages/conversation/${id_user}`);
 }
 
 /**

@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { jsPDF } from "jspdf";
 import { useNavigate } from "react-router-dom";
+import Swal from 'sweetalert2';
+import DualLoader from "./components/DualLoader";
 import {
   CircleDollarSign,
   LayoutDashboard,
@@ -50,35 +52,7 @@ const sidebarItems = [
   { id: "messages", label: "Mensajes", icon: MessageSquare },
 ];
 
-const reservations = [
-  {
-    id: 1,
-    guest: "Amara Vance",
-    dates: "May 12 - May 18",
-    listing: "The Glass Pavilion",
-    status: "confirmed",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",
-  },
-  {
-    id: 2,
-    guest: "Leo Sterling",
-    dates: "May 20 - May 24",
-    listing: "Urban Loft Studio",
-    status: "pending",
-    avatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80",
-  },
-  {
-    id: 3,
-    guest: "Maya Okoro",
-    dates: "Jun 02 - Jun 05",
-    listing: "Cliffside Retreat",
-    status: "confirmed",
-    avatar:
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=80&q=80",
-  },
-];
+
 
 function HostDashboardPage() {
   const navigate = useNavigate();
@@ -151,6 +125,14 @@ function HostDashboardPage() {
     contactName: "Julian Rossi",
   });
   const [supportStatus, setSupportStatus] = useState("idle");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [reservations, setReservations] = useState([]);
+  const [transactionsData, setTransactionsData] = useState([]);
+  const [earningsData, setEarningsData] = useState({
+    monthly: { totalAmount: "$0.00", change: "0%", chartBars: [], chartLabels: [], activeBarIndex: 0, nextPayout: "$0.00", nextPayoutDate: "-", payoutProgress: 0 },
+    yearly: { totalAmount: "$0.00", change: "0%", chartBars: [], chartLabels: [], activeBarIndex: 0, nextPayout: "$0.00", nextPayoutDate: "-", payoutProgress: 0 },
+  });
+
   const dropdownRef = useRef(null);
   const newListingCoverPhotoRef = useRef(null);
   const newListingPanoramaPhotosRef = useRef(null);
@@ -167,87 +149,9 @@ function HostDashboardPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Earnings data for monthly and yearly views
-  const earningsData = {
-    monthly: {
-      totalAmount: "$42,850.20",
-      change: "↗ +12.5% this month",
-      chartBars: [60, 70, 65, 75, 68, 72, 85, 55],
-      chartLabels: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG"],
-      activeBarIndex: 6,
-      nextPayout: "$2,410.00",
-      nextPayoutDate: "July 24, 2024",
-      payoutProgress: 85,
-    },
-    yearly: {
-      totalAmount: "$487,420.00",
-      change: "↗ +18.3% this year",
-      chartBars: [65, 72, 78, 82, 88, 85, 90, 95, 92, 88, 85, 78],
-      chartLabels: ["2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024"],
-      activeBarIndex: 11,
-      nextPayout: "$12,840.00",
-      nextPayoutDate: "January 15, 2025",
-      payoutProgress: 65,
-    },
-  };
+
 
   const currentEarningsData = earningsData[earningsView];
-
-  // Transaction data with listing IDs for filtering
-  const transactionsData = [
-    {
-      id: "txn-1",
-      listingId: "lst-1",
-      guest: "Sarah Jenkins",
-      guestAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",
-      bookingId: "TH-8821",
-      dateRange: "Jul 12 - Jul 15",
-      nights: 3,
-      listingName: "The Glass Atelier",
-      listingType: "Luxury Studio",
-      earnings: "$842.00",
-      status: "PAID"
-    },
-    {
-      id: "txn-2",
-      listingId: "lst-2",
-      guest: "Marcus Thorne",
-      guestAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80",
-      bookingId: "TH-8845",
-      dateRange: "Jul 18 - Jul 22",
-      nights: 4,
-      listingName: "Mid-Century Oasis",
-      listingType: "Desert Villa",
-      earnings: "$1,250.00",
-      status: "PENDING"
-    },
-    {
-      id: "txn-3",
-      listingId: "lst-1",
-      guest: "Elena Rodriguez",
-      guestAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=80&q=80",
-      bookingId: "TH-8859",
-      dateRange: "Jul 25 - Jul 27",
-      nights: 2,
-      listingName: "The Glass Atelier",
-      listingType: "Luxury Studio",
-      earnings: "$560.00",
-      status: "PENDING"
-    },
-    {
-      id: "txn-4",
-      listingId: "lst-3",
-      guest: "James Mitchell",
-      guestAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80",
-      bookingId: "TH-8867",
-      dateRange: "Aug 1 - Aug 3",
-      nights: 2,
-      listingName: "Urban Loft Studio",
-      listingType: "Modern Apartment",
-      earnings: "$420.00",
-      status: "PAID"
-    },
-  ];
 
   // Filter transactions based on selected listing
   const filteredTransactions = selectedEarningsListing 
@@ -394,6 +298,7 @@ function HostDashboardPage() {
 
   const loadHousings = async () => {
     try {
+      setIsProcessing(true);
       const userProfile = await getMyProfile();
       const userId = userProfile?.id_user;
       const data = await getHousings();
@@ -448,9 +353,78 @@ function HostDashboardPage() {
       const bookingsData = await getHostBookings();
       if (bookingsData && Array.isArray(bookingsData)) {
           setHostBookings(bookingsData);
+
+          // Build Reservations
+          const dynamicReservations = bookingsData.map(b => {
+             const start = b.start_date ? new Date(b.start_date) : new Date();
+             const end = b.end_date ? new Date(b.end_date) : new Date();
+             const startStr = start.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+             const endStr = end.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+             
+             return {
+               id: b.id_booking,
+               guest: b.user?.name || "Huésped",
+               dates: `${startStr} - ${endStr}`,
+               listing: b.housing?.name || "Alojamiento",
+               status: b.status === "confirmed" ? "confirmed" : "pending",
+               avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80"
+             };
+          });
+          setReservations(dynamicReservations);
+
+          // Build Transactions
+          const dynamicTransactions = bookingsData.map(b => {
+             const start = b.start_date ? new Date(b.start_date) : new Date();
+             const end = b.end_date ? new Date(b.end_date) : new Date();
+             const startStr = start.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+             const endStr = end.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+             const nights = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+             
+             return {
+                id: `txn-${b.id_booking}`,
+                listingId: `lst-${b.id_housing}`,
+                guest: b.user?.name || "Huésped",
+                guestAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",
+                bookingId: `BK-${b.id_booking}`,
+                dateRange: `${startStr} - ${endStr}`,
+                nights,
+                listingName: b.housing?.name || "Alojamiento",
+                listingType: "Alojamiento",
+                earnings: `$${Number(b.total_price || 0).toLocaleString()}`,
+                status: b.status === "confirmed" ? "PAID" : "PENDING"
+             };
+          });
+          setTransactionsData(dynamicTransactions);
+
+          // Build Earnings
+          const totalEarnings = bookingsData.reduce((acc, b) => acc + Number(b.total_price || 0), 0);
+          setEarningsData({
+            monthly: {
+              totalAmount: `$${totalEarnings.toLocaleString()}`,
+              change: "↗ +0% this month",
+              chartBars: [10, 20, 30, 40, 50, 60, 70, 80],
+              chartLabels: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG"],
+              activeBarIndex: 6,
+              nextPayout: "-",
+              nextPayoutDate: "No data",
+              payoutProgress: 50,
+            },
+            yearly: {
+              totalAmount: `$${totalEarnings.toLocaleString()}`,
+              change: "↗ +0% this year",
+              chartBars: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120],
+              chartLabels: ["2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024"],
+              activeBarIndex: 11,
+              nextPayout: "-",
+              nextPayoutDate: "No data",
+              payoutProgress: 50,
+            }
+          });
       }
     } catch (err) {
       console.error("Error al cargar reservas:", err);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -465,9 +439,23 @@ function HostDashboardPage() {
     if (
       activeItem === "settings" &&
       itemId !== "settings" &&
-      settingsDirty &&
-      !window.confirm("Tienes cambios sin guardar. Si sales, se perderán.")
+      settingsDirty
     ) {
+      Swal.fire({
+        title: '¿Estás seguro?',
+        text: 'Tienes cambios sin guardar. Si sales, se perderán.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setActiveItem(itemId);
+          if (itemId === "listings") {
+            setListingAction(null);
+          }
+        }
+      });
       return;
     }
 
@@ -694,6 +682,7 @@ function HostDashboardPage() {
 
   const handleSaveNewListing = async (isDraft) => {
     try {
+      setIsProcessing(true);
       let typeId = 1;
       if (newListingForm.propertyType === 'luxury-villa') typeId = 2;
       if (newListingForm.propertyType === 'urban-loft') typeId = 3;
@@ -737,7 +726,11 @@ function HostDashboardPage() {
         }
       }
 
-      alert(isDraft ? "Borrador guardado exitosamente." : "Alojamiento creado exitosamente. ¡Continúa configurando!");
+      Swal.fire({
+        title: 'Éxito',
+        text: isDraft ? "Borrador guardado exitosamente." : "Alojamiento creado exitosamente. ¡Continúa configurando!",
+        icon: 'success'
+      });
       
       // Recarga los alojamientos para mostrar el nuevo
       await loadHousings();
@@ -748,7 +741,13 @@ function HostDashboardPage() {
       setListingAction(null);
     } catch (error) {
       console.error(error);
-      alert(`Error al guardar: ${error.message}`);
+      Swal.fire({
+        title: 'Error',
+        text: `Error al guardar: ${error.message}`,
+        icon: 'error'
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1642,11 +1641,12 @@ function HostDashboardPage() {
           className="hostListingPrimaryBtn" 
           onClick={async () => {
             try {
+              setIsProcessing(true);
               // Buscar el ID real
               const targetListing = registeredListings.find(l => l.title === editListingForm.title);
               const realId = targetListing ? targetListing.realId : null;
               if (!realId) {
-                alert("No se encontró el ID real en la base de datos.");
+                Swal.fire({title: 'Error', text: 'No se encontró el ID real en la base de datos.', icon: 'error'});
                 return;
               }
 
@@ -1658,9 +1658,11 @@ function HostDashboardPage() {
                 price_per_night: Number(editListingForm.basePrice),
                 status: "available"
               });
-              alert("Datos actualizados correctamente en base de datos.");
+              Swal.fire({title: 'Éxito', text: 'Datos actualizados correctamente en base de datos.', icon: 'success'});
             } catch (err) {
-              alert("Error al actualizar: " + err.message);
+              Swal.fire({title: 'Error', text: 'Error al actualizar: ' + err.message, icon: 'error'});
+            } finally {
+              setIsProcessing(false);
             }
           }}
         >
@@ -1954,6 +1956,7 @@ function HostDashboardPage() {
 
   return (
     <div className="hostDashboardPage">
+      {isProcessing && <DualLoader overlay />}
       <aside className="hostSidebar">
         <div className="hostBrandBlock">
           <p>Bienvenido, {displayName}</p>
@@ -1988,9 +1991,20 @@ function HostDashboardPage() {
           onClick={() => {
             if (
               activeItem === "settings" &&
-              settingsDirty &&
-                !window.confirm("Tienes cambios sin guardar. Si sales, se perderán.")
+              settingsDirty
             ) {
+              Swal.fire({
+                title: '¿Estás seguro?',
+                text: 'Tienes cambios sin guardar. Si sales, se perderán.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí',
+                cancelButtonText: 'Cancelar'
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  navigate("/");
+                }
+              });
               return;
             }
             navigate("/");
