@@ -680,3 +680,9 @@
     transform-origin: top center;
   }
 }
+ 
+ . s t a y D e t a i l G a l l e r y P a r t i a l   {   d i s p l a y :   b l o c k ;   b o r d e r - r a d i u s :   1 8 p x ;   o v e r f l o w :   h i d d e n ;   } 
+ 
+ 
+ .stayDetailGalleryPartial { display: block; border-radius: 18px; overflow: hidden; }
+.stayDetailGalleryPartial .stayDetailGalleryMain { border-radius: 18px; }

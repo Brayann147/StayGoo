@@ -49,7 +49,7 @@ export const getMyBookings = async (id_user) => {
         .from('booking')
         .select(`
             *,
-            housing (id_housing, name, city, address, price_per_night)
+            housing (id_housing, name, municipality, department, country, address, price_per_night)
         `)
         .eq('id_user', id_user);
     if (error) throw error;

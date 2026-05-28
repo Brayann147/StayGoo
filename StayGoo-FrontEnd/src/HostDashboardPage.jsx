@@ -40,7 +40,7 @@ import { MessagesSection } from "./components/MessagesSection";
 import EquirectangularUploader from "./components/EquirectangularUploader";
 import { SettingsSection } from "./components/SettingsSection";
 import logoImage from "./assets/logoo.png";
-import { createHousing, getHousings, updateHousing, getHostBookings, getMyProfile, uploadHousingImage, fetchCitiesByCountry } from "./api";
+import { createHousing, getHousings, updateHousing, getHostBookings, getMyProfile, uploadHousingImage, fetchDepartmentsByCountry, fetchCitiesByDepartment } from "./api";
 import { useAuthUser } from "./useAuthUser";
 import "./HostDashboardPage.css";
 
@@ -94,6 +94,7 @@ function HostDashboardPage() {
       "An award-winning glass and steel structure nestled in the redwood forests. Floor-to-ceiling transparency meets absolute seclusion for a truly immersive nature experience.",
     address: "1224 Redwood Hollow Trail",
     cityRegion: "Big Sur",
+    department: "",
     country: "United States",
     visibility: "Approximate location shown to public",
     basePrice: "850",
@@ -114,6 +115,7 @@ function HostDashboardPage() {
     description: "",
     address: "",
     cityRegion: "",
+    department: "",
     country: "",
     visibility: "Approximate location shown to public",
     basePrice: "",
@@ -135,20 +137,56 @@ function HostDashboardPage() {
   ]);
   const [newListingPhotos, setNewListingPhotos] = useState([]);
   const [newListingPanoramaPhotos, setNewListingPanoramaPhotos] = useState([]);
+  const [editListingPanoramaPhotos, setEditListingPanoramaPhotos] = useState([]);
 
+  const [availableDepartments, setAvailableDepartments] = useState([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [availableCities, setAvailableCities] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
 
+  // Fetch departments when country changes
   useEffect(() => {
-    // For edit listing
     if (listingAction === "edit" || listingAction === "new") {
       const form = listingAction === "edit" ? editListingForm : newListingForm;
       const currentCountry = form.country;
       
       const selectedCountryObj = COUNTRIES.find(c => c.name === currentCountry);
       if (selectedCountryObj) {
+        setLoadingDepartments(true);
+        fetchDepartmentsByCountry(selectedCountryObj.code)
+          .then(deps => {
+            setAvailableDepartments(deps || []);
+            // Also reset cities when country changes
+            setAvailableCities([]);
+          })
+          .catch(err => {
+            console.error("Error fetching departments", err);
+            setAvailableDepartments([]);
+            setAvailableCities([]);
+          })
+          .finally(() => {
+            setLoadingDepartments(false);
+          });
+      } else {
+        setAvailableDepartments([]);
+        setAvailableCities([]);
+      }
+    }
+  }, [editListingForm.country, newListingForm.country, listingAction]);
+
+  // Fetch cities when department changes
+  useEffect(() => {
+    if (listingAction === "edit" || listingAction === "new") {
+      const form = listingAction === "edit" ? editListingForm : newListingForm;
+      const currentCountry = form.country;
+      const currentDeptName = form.department;
+      
+      const selectedCountryObj = COUNTRIES.find(c => c.name === currentCountry);
+      const selectedDeptObj = availableDepartments.find(d => d.name === currentDeptName);
+
+      if (selectedCountryObj && selectedDeptObj) {
         setLoadingCities(true);
-        fetchCitiesByCountry(selectedCountryObj.code)
+        fetchCitiesByDepartment(selectedCountryObj.code, selectedDeptObj.adminCode1)
           .then(cities => {
             setAvailableCities(cities || []);
           })
@@ -163,7 +201,7 @@ function HostDashboardPage() {
         setAvailableCities([]);
       }
     }
-  }, [editListingForm.country, newListingForm.country, listingAction]);
+  }, [editListingForm.department, newListingForm.department, listingAction, availableDepartments]);
   const [selectedReservationListingId, setSelectedReservationListingId] = useState("lst-1");
   const [reservationViewDate, setReservationViewDate] = useState(new Date(2024, 9, 1));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState("2024-10-01");
@@ -190,6 +228,7 @@ function HostDashboardPage() {
 
   const dropdownRef = useRef(null);
   const newListingCoverPhotoRef = useRef(null);
+  const editListingCoverPhotoRef = useRef(null);
   const newListingPanoramaPhotosRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -369,9 +408,24 @@ function HostDashboardPage() {
             const normalImages = images.filter(img => !img.is_panorama);
             const firstImage = normalImages.length > 0 ? normalImages[0].image_url : "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80";
 
-            const cityParts = (item.city || "").split(",");
-            const parsedCityRegion = cityParts[0] ? cityParts[0].trim() : "";
-            const parsedCountry = cityParts[1] ? cityParts.slice(1).join(",").trim() : "";
+            const cityParts = (item.municipality || item.cityRegion || "").split(",").map(p => p.trim());
+            
+            let parsedCityRegion = item.municipality || "";
+            let parsedDepartment = item.department || "";
+            let parsedCountry = item.country || "";
+
+            if (!parsedDepartment && !parsedCountry) {
+              if (cityParts.length >= 3) {
+                parsedCityRegion = cityParts[0];
+                parsedDepartment = cityParts[1];
+                parsedCountry = cityParts.slice(2).join(",").trim();
+              } else if (cityParts.length === 2) {
+                parsedCityRegion = cityParts[0];
+                parsedCountry = cityParts[1];
+              } else if (cityParts.length === 1) {
+                parsedCityRegion = cityParts[0];
+              }
+            }
 
             return {
               id: "lst-" + item.id_housing, // El Dashboard asume formato id como lst-1
@@ -381,6 +435,7 @@ function HostDashboardPage() {
               description: item.description || "",
               address: item.address || "",
               cityRegion: parsedCityRegion,
+              department: parsedDepartment,
               country: parsedCountry,
               visibility: "Approximate location",
               basePrice: item.price_per_night?.toString() || "0",
@@ -640,6 +695,7 @@ function HostDashboardPage() {
       address: listing.address,
       cityRegion: listing.cityRegion,
       country: listing.country || "",
+      department: listing.department || "",
       visibility: listing.visibility,
       basePrice: listing.basePrice,
       weeklyDiscount: listing.weeklyDiscount,
@@ -653,11 +709,24 @@ function HostDashboardPage() {
         kitchen: Boolean(listing.amenities?.kitchen),
       }
     });
-    setEditListingPhotos([
-      listing.coverImage,
-      "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80"
-    ]);
+
+    const allImages = listing.housing_images || [];
+    console.log("allImages inside handleSelect:", allImages);
+    const normalImgs = allImages.filter(img => !img.is_panorama).map(img => ({
+      src: img.image_url,
+      name: img.image_url.split('/').pop() || "Foto guardada",
+      id: img.id_image
+    }));
+    
+    const panoImgs = allImages.filter(img => img.is_panorama).map(img => ({
+      src: img.image_url,
+      name: img.image_url.split('/').pop() || "Modelo 360 guardado",
+      id: img.id_image
+    }));
+    console.log("panoImgs mapped:", panoImgs);
+
+    setEditListingPhotos(normalImgs);
+    setEditListingPanoramaPhotos(panoImgs);
     setListingAction("edit");
   };
 
@@ -700,7 +769,7 @@ function HostDashboardPage() {
     if (!file) return;
     // Crear object URL para preview/uso inmediato
     const src = URL.createObjectURL(file);
-    setNewListingPanoramaPhotos((prev) => [...prev, { src, name: file.name, file }]);
+    setNewListingPanoramaPhotos((prev) => [...prev, { src, name: file.name || "panorama.jpg", file }]);
   };
 
   const handleNewPhotoUpload = (event) => {
@@ -741,6 +810,58 @@ function HostDashboardPage() {
     event.target.value = "";
   };
 
+  const removeEditPanoramaPhoto = (index) => {
+    setEditListingPanoramaPhotos((prev) => {
+      const item = prev[index];
+      try {
+        if (item && item.src && item.src.startsWith("blob:")) URL.revokeObjectURL(item.src);
+      } catch (e) {}
+      return prev.filter((_, photoIndex) => photoIndex !== index);
+    });
+  };
+
+  const handleEditPanoramaValid = async (file, info) => {
+    if (!file) return;
+    const src = URL.createObjectURL(file);
+    setEditListingPanoramaPhotos((prev) => [...prev, { src, name: file.name, file }]);
+  };
+
+  const handleEditPhotoUpload = (event) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const file = files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result;
+      if (typeof dataUrl === "string") {
+        setEditListingPhotos((prev) => [...prev, { src: dataUrl, name: file.name, file }]);
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handleEditPanoramaPhotoUpload = (event) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result;
+        if (typeof dataUrl === "string") {
+          setEditListingPanoramaPhotos((prev) => [...prev, { src: dataUrl, name: file.name, file }]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    event.target.value = "";
+  };
+
   const handleSaveNewListing = async (isDraft) => {
     try {
       setIsProcessing(true);
@@ -749,10 +870,12 @@ function HostDashboardPage() {
       if (newListingForm.propertyType === 'urban-loft') typeId = 3;
       if (newListingForm.propertyType === 'cabin') typeId = 4;
 
-      const payload = {
+        const payload = {
         name: newListingForm.title || (isDraft ? "Borrador de alojamiento" : "Nuevo alojamiento"),
         description: newListingForm.description || "Sin descripción",
-        city: newListingForm.cityRegion ? `${newListingForm.cityRegion}, ${newListingForm.country}`.trim().replace(/^, |, $/g, '') : (newListingForm.country || "Desconocida"),
+        country: newListingForm.country || "",
+        department: newListingForm.department || "",
+        municipality: newListingForm.cityRegion || "",
         address: newListingForm.address || "Sin dirección",
         price_per_night: parseInt(newListingForm.basePrice) || 0,
         capacity: 4, 
@@ -1556,60 +1679,6 @@ function HostDashboardPage() {
       </section>
 
       <div className="hostEditorSectionHeader">
-        <h2>Photos</h2>
-        <button type="button">Añadir más</button>
-      </div>
-      <section className="hostEditorCard hostPhotosCard">
-        {editListingPhotos[0] ? (
-          <article className="hostCoverPhoto">
-            <img src={editListingPhotos[0]} alt="Foto de portada" />
-            <span>FOTO DE PORTADA</span>
-            <button
-              type="button"
-              className="hostDeletePhotoBtn"
-              aria-label="Eliminar foto de portada"
-              onClick={() => removeEditPhoto(0)}
-            >
-              <Trash2 size={14} />
-            </button>
-          </article>
-        ) : (
-          <button type="button" className="hostUploadCard hostUploadCardLarge">
-            <Upload size={20} />
-            Sube una foto de portada
-          </button>
-        )}
-        <div className="hostPhotoStack">
-          {editListingPhotos.slice(1, 3).map((photo, index) => (
-            <div className="hostSmallPhotoWrap" key={`${photo}-${index}`}>
-              <img src={photo} alt={`Foto del alojamiento ${index + 2}`} />
-              <button
-                type="button"
-                className="hostDeletePhotoBtn"
-                aria-label="Eliminar foto"
-                onClick={() => removeEditPhoto(index + 1)}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-
-          {editListingPhotos.slice(1, 3).length < 2 ? (
-            <button type="button" className="hostUploadCard hostUploadCardCompact" aria-label="Añadir foto">
-              <Plus size={18} />
-              Añadir foto
-            </button>
-          ) : null}
-        </div>
-        <button type="button" className="hostUploadCard">
-          <Upload size={18} />
-          Arrastra las fotos aquí para subirlas
-        </button>
-      </section>
-
-
-
-      <div className="hostEditorSectionHeader">
         <h2>Dirección</h2>
       </div>
       <section className="hostEditorCard">
@@ -1630,7 +1699,8 @@ function HostDashboardPage() {
                 value={editListingForm.country}
                 onChange={(event) => {
                   updateEditField("country", event.target.value);
-                  updateEditField("cityRegion", ""); // reset city when country changes
+                  updateEditField("department", ""); // reset dept
+                  updateEditField("cityRegion", ""); // reset city
                 }}
               >
                 <option value="">Seleccione un país...</option>
@@ -1642,15 +1712,35 @@ function HostDashboardPage() {
             </div>
           </label>
           <label>
-            Pueblo / Ciudad
+            Departamento / Estado
+            <div className="hostSelectMock">
+              <select
+                className="hostSelectField"
+                value={editListingForm.department}
+                onChange={(event) => {
+                  updateEditField("department", event.target.value);
+                  updateEditField("cityRegion", ""); // reset city when dept changes
+                }}
+                disabled={loadingDepartments || !editListingForm.country || availableDepartments.length === 0}
+              >
+                <option value="">{loadingDepartments ? "Cargando..." : "Seleccione un departamento..."}</option>
+                {availableDepartments.map((dept, idx) => (
+                  <option key={idx} value={dept.name}>{dept.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={15} />
+            </div>
+          </label>
+          <label>
+            Pueblo / Municipio
             <div className="hostSelectMock">
               <select
                 className="hostSelectField"
                 value={editListingForm.cityRegion}
                 onChange={(event) => updateEditField("cityRegion", event.target.value)}
-                disabled={loadingCities || !editListingForm.country || availableCities.length === 0}
+                disabled={loadingCities || !editListingForm.department || availableCities.length === 0}
               >
-                <option value="">{loadingCities ? "Cargando..." : "Seleccione una ciudad..."}</option>
+                <option value="">{loadingCities ? "Cargando..." : "Seleccione un municipio..."}</option>
                 {availableCities.map((city, idx) => (
                   <option key={idx} value={city.name}>{city.name}</option>
                 ))}
@@ -1728,6 +1818,109 @@ function HostDashboardPage() {
 
       </section>
 
+      <div className="hostEditorSectionHeader">
+        <h2>Fotos</h2>
+      </div>
+      <section className="hostEditorCard hostPhotosCard hostPhotosCardSingle">
+        <input
+          type="file"
+          ref={editListingCoverPhotoRef}
+          onChange={handleEditPhotoUpload}
+          accept="image/*"
+          hidden
+          multiple={false}
+        />
+        <div className="hostPhotoAttachmentLayout">
+          <button
+            type="button"
+            className={`hostUploadCard hostUploadCardLarge hostSinglePhotoDropzone ${editListingPhotos.length > 0 ? "hasContent" : ""}`}
+            onClick={() => editListingCoverPhotoRef.current?.click()}
+          >
+            <Upload size={22} />
+            <strong>{editListingPhotos.length > 0 ? "Subir otra foto" : "Subir foto"}</strong>
+            <span>Un archivo a la vez</span>
+          </button>
+
+          <div className="hostPhotoAttachmentListWrap">
+            <div className="hostPhotoAttachmentListHeader">
+              <p>Fotos adjuntas</p>
+              <span>{editListingPhotos.length}</span>
+            </div>
+
+            <div className="hostPhotoAttachmentList">
+              {editListingPhotos.length > 0 ? (
+                editListingPhotos.map((photo, index) => (
+                  <article className="hostPhotoAttachmentItem" key={`${photo.name}-${index}`}>
+                    <div className="hostPhotoAttachmentThumb">
+                      <img src={photo.src} alt={photo.name} />
+                    </div>
+                    <div className="hostPhotoAttachmentMeta">
+                      <strong>{photo.name}</strong>
+                      <span>Adjuntada</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="hostDeletePhotoBtn"
+                      aria-label={`Eliminar foto ${index + 1}`}
+                      onClick={() => removeEditPhoto(index)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </article>
+                ))
+              ) : (
+                <div className="hostPhotoAttachmentEmpty">Sin fotos adjuntas.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="hostEditorSectionHeader hostEditorSectionHeaderSpaced">
+        <h2>Modelo 360</h2>
+      </div>
+      <section className="hostEditorCard hostPanoramaCard">
+        <div className="hostPhotoAttachmentLayout hostPanoramaAttachmentLayout">
+          <EquirectangularUploader 
+            onValidImage={handleEditPanoramaValid} 
+            strict={false} 
+          />
+
+          <div className="hostPhotoAttachmentListWrap">
+            <div className="hostPhotoAttachmentListHeader">
+              <p>Modelo 360 adjunto</p>
+              <span>{editListingPanoramaPhotos.length}</span>
+            </div>
+
+            <div className="hostPhotoAttachmentList">
+              {editListingPanoramaPhotos.length > 0 ? (
+                editListingPanoramaPhotos.map((photo, index) => (
+                  <article className="hostPhotoAttachmentItem" key={`${photo.name}-${index}`}>
+                    <div className="hostPhotoAttachmentThumb">
+                      <img src={photo.src} alt={photo.name} />
+                    </div>
+                    <div className="hostPhotoAttachmentMeta">
+                      <strong>{photo.name}</strong>
+                      <span>360° adjunta</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="hostDeletePhotoBtn"
+                      aria-label={`Eliminar imagen 360 ${index + 1}`}
+                      onClick={() => removeEditPanoramaPhoto(index)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </article>
+                ))
+              ) : (
+                <div className="hostPhotoAttachmentEmpty">Sin imágenes 360 adjuntas.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="hostEditorCard hostCalendarSync">
         <div>
           <h3>Sincronización de calendario</h3>
@@ -1758,11 +1951,36 @@ function HostDashboardPage() {
                 name: editListingForm.title,
                 description: editListingForm.description,
                 address: editListingForm.address,
-                city: editListingForm.cityRegion ? `${editListingForm.cityRegion}, ${editListingForm.country}`.trim().replace(/^, |, $/g, '') : (editListingForm.country || "Desconocida"),
+                country: editListingForm.country || "",
+                department: editListingForm.department || "",
+                municipality: editListingForm.cityRegion || "",
                 price_per_night: Number(editListingForm.basePrice),
                 status: "available"
               });
+
+              // Subir nuevas fotos que se hayan adjuntado
+              for (const item of editListingPhotos) {
+                if (item.file) {
+                  try {
+                    await uploadHousingImage(realId, item.file, false);
+                  } catch (err) {
+                    console.error("Error subiendo foto normal:", err);
+                  }
+                }
+              }
+
+              for (const item of editListingPanoramaPhotos) {
+                if (item.file) {
+                  try {
+                    await uploadHousingImage(realId, item.file, true);
+                  } catch (err) {
+                    console.error("Error subiendo foto panorama:", err);
+                  }
+                }
+              }
+
               Swal.fire({title: 'Éxito', text: 'Datos actualizados correctamente en base de datos.', icon: 'success'});
+              await loadHousings();
             } catch (err) {
               Swal.fire({title: 'Error', text: 'Error al actualizar: ' + err.message, icon: 'error'});
             } finally {
@@ -1847,7 +2065,8 @@ function HostDashboardPage() {
                 value={newListingForm.country}
                 onChange={(event) => {
                   updateNewField("country", event.target.value);
-                  updateNewField("cityRegion", ""); // reset city when country changes
+                  updateNewField("department", ""); // reset dept
+                  updateNewField("cityRegion", ""); // reset city
                 }}
               >
                 <option value="">Seleccione un país...</option>
@@ -1859,15 +2078,35 @@ function HostDashboardPage() {
             </div>
           </label>
           <label>
-            Pueblo / Ciudad
+            Departamento / Estado
+            <div className="hostSelectMock">
+              <select
+                className="hostSelectField"
+                value={newListingForm.department}
+                onChange={(event) => {
+                  updateNewField("department", event.target.value);
+                  updateNewField("cityRegion", ""); // reset city when dept changes
+                }}
+                disabled={loadingDepartments || !newListingForm.country || availableDepartments.length === 0}
+              >
+                <option value="">{loadingDepartments ? "Cargando..." : "Seleccione un departamento..."}</option>
+                {availableDepartments.map((dept, idx) => (
+                  <option key={idx} value={dept.name}>{dept.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={15} />
+            </div>
+          </label>
+          <label>
+            Pueblo / Municipio
             <div className="hostSelectMock">
               <select
                 className="hostSelectField"
                 value={newListingForm.cityRegion}
                 onChange={(event) => updateNewField("cityRegion", event.target.value)}
-                disabled={loadingCities || !newListingForm.country || availableCities.length === 0}
+                disabled={loadingCities || !newListingForm.department || availableCities.length === 0}
               >
-                <option value="">{loadingCities ? "Cargando..." : "Seleccione una ciudad..."}</option>
+                <option value="">{loadingCities ? "Cargando..." : "Seleccione un municipio..."}</option>
                 {availableCities.map((city, idx) => (
                   <option key={idx} value={city.name}>{city.name}</option>
                 ))}

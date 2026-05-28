@@ -14,14 +14,6 @@ import {
 
 registerLocale("es", es);
 
-const defaultGallery = [
-  "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80",
-  "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80"
-];
-
 const defaultReviews = [
   {
     name: "Mariana Torres",
@@ -60,18 +52,20 @@ const getGallery = (stay) => {
     const normal = stay.housing_images.filter(img => !img.is_panorama).map(img => img.image_url);
     source.push(...normal);
   }
-  if (Array.isArray(stay.gallery)) {
-    source.push(...stay.gallery);
-  }
-  if (stay.image) {
+  // Remove defaults. Let's just push their own images.
+  if (stay.image && !stay.image.includes('unsplash')) {
     source.push(stay.image);
   }
-  if (stay.coverImage) {
+  if (stay.coverImage && !stay.coverImage.includes('unsplash')) {
     source.push(stay.coverImage);
+  }
+  if (Array.isArray(stay.gallery)) {
+    const validGallery = stay.gallery.filter(g => typeof g === 'string' && !g.includes('unsplash'));
+    source.push(...validGallery);
   }
 
   const unique = Array.from(new Set(source.filter(Boolean)));
-  return [...unique, ...defaultGallery].slice(0, 5);
+  return unique.slice(0, 5);
 };
 
 const getPanoramaSrc = (stay, defaultSrc) => {
@@ -141,7 +135,7 @@ function StayDetailPage() {
           if (latest) {
             const images = latest.housing_images || [];
             const normalImages = images.filter(img => !img.is_panorama);
-            const firstImage = normalImages.length > 0 ? normalImages[0].image_url : "https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=1200&q=80";
+              const firstImage = normalImages.length > 0 ? normalImages[0].image_url : "";
 
             setStay(prev => ({
               ...prev,
@@ -334,13 +328,17 @@ function StayDetailPage() {
           </p>
         </header>
 
-        <section className="stayDetailGallery">
-          <div className="stayDetailGalleryMain"><img src={gallery[0]} alt="Vista principal del alojamiento" /></div>
-          <div className="stayDetailGalleryTile"><img src={gallery[1]} alt="Galeria 1" /></div>
-          <div className="stayDetailGalleryTile"><img src={gallery[2]} alt="Galeria 2" /></div>
-          <div className="stayDetailGalleryTile"><img src={gallery[3]} alt="Galeria 3" /></div>
-          <div className="stayDetailGalleryTile"><img src={gallery[4]} alt="Galeria 4" /></div>
-        </section>
+        {gallery.length > 0 && (
+          <section className={`stayDetailGallery ${gallery.length < 5 ? "stayDetailGalleryPartial" : ""}`}>
+            <div className="stayDetailGalleryMain">
+              {gallery[0] ? <img src={gallery[0]} alt="Vista principal del alojamiento" /> : null}
+            </div>
+            {gallery[1] && <div className="stayDetailGalleryTile"><img src={gallery[1]} alt="Galeria 1" /></div>}
+            {gallery[2] && <div className="stayDetailGalleryTile"><img src={gallery[2]} alt="Galeria 2" /></div>}
+            {gallery[3] && <div className="stayDetailGalleryTile"><img src={gallery[3]} alt="Galeria 3" /></div>}
+            {gallery[4] && <div className="stayDetailGalleryTile"><img src={gallery[4]} alt="Galeria 4" /></div>}
+          </section>
+        )}
 
         <section className="stayDetailBody">
           <div className="stayDetailLeftCol">

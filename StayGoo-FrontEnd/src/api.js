@@ -269,10 +269,51 @@ export async function uploadHousingImage(idHousing, file, isPanorama) {
 }
 
 /**
- * Obtener ciudades desde el backend usando la API de GeoNames
- * @param {string} countryCode - Código ISO del país (ej. "CO", "MX", "US")
+ * Obtener departamentos directo del dataset de GeoNames (featureCode=ADM1)
  */
-export async function fetchCitiesByCountry(countryCode) {
-  return request(`/cities?country=${countryCode}`, { public: true });
+export async function fetchDepartmentsByCountry(countryCode) {
+  try {
+    const response = await fetch(
+      `https://secure.geonames.org/searchJSON?country=${countryCode}&featureCode=ADM1&maxRows=100&username=rafaelc26`
+    );
+    const data = await response.json();
+    
+    if (!data || !data.geonames) {
+      return [];
+    }
+    
+    return data.geonames.map(dep => ({
+      name: dep.name,
+      adminCode1: dep.adminCode1
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error("Error directo a GeoNames (Departamentos):", error);
+    return [];
+  }
+}
+
+/**
+ * Obtener ciudades directo del dataset de GeoNames por departamento
+ */
+export async function fetchCitiesByDepartment(countryCode, adminCode1) {
+  try {
+    const response = await fetch(
+      `https://secure.geonames.org/searchJSON?country=${countryCode}&adminCode1=${adminCode1}&featureClass=P&maxRows=100&username=rafaelc26`
+    );
+    const data = await response.json();
+    
+    if (!data || !data.geonames) {
+      return [];
+    }
+    
+    return data.geonames.map(city => ({
+      name: city.name,
+      lat: city.lat,
+      lng: city.lng
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error("Error directo a GeoNames (Ciudades):", error);
+    return [];
+  }
 }
 
