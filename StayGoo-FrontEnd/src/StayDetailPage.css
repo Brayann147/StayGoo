@@ -86,36 +86,281 @@
   display: inline-block;
 }
 
+/* ══ GALERÍA ESTILO AIRBNB ══════════════════════════════════════ */
 .stayDetailGallery {
   display: grid;
-  grid-template-columns: 2.15fr 1fr 1fr;
-  grid-template-rows: 184px 184px;
-  gap: 10px;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: 215px 215px;
+  gap: 5px;
   margin-bottom: 34px;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.stayDetailGallery img {
+/* Imagen principal: ocupa 2 columnas y 2 filas */
+.stayDetailGalleryMain {
+  grid-column: span 2;
+  grid-row: span 2;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+
+.stayDetailGalleryMain img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  display: block;
 }
 
-.stayDetailGalleryMain {
-  grid-row: span 2;
-  border-radius: 18px 0 0 18px;
-  overflow: hidden;
+.stayDetailGalleryMain:hover img {
+  transform: scale(1.04);
 }
 
+/* Tiles del grid derecho */
 .stayDetailGalleryTile {
   overflow: hidden;
+  cursor: pointer;
+  position: relative;
 }
 
-.stayDetailGalleryTile:nth-child(3) {
-  border-radius: 0 18px 0 0;
+.stayDetailGalleryTile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  display: block;
 }
 
-.stayDetailGalleryTile:nth-child(5) {
-  border-radius: 0 0 18px 0;
+.stayDetailGalleryTile:hover img {
+  transform: scale(1.05);
+}
+
+/* Tile con el botón "Mostrar todas las fotos" */
+.stayDetailGalleryLastTile {
+  position: relative;
+}
+
+/* Botón estilo Airbnb ─ blanco, borde, esquina inferior derecha */
+.stayDetailShowAllBtn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 5;
+  background: #fff;
+  color: #1a1a1a;
+  border: 1.5px solid #1a1a1a;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  transition: background 0.17s, transform 0.15s, box-shadow 0.15s;
+}
+
+.stayDetailShowAllBtn:hover {
+  background: #f5f5f5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+}
+
+/* Solo una foto */
+.stayDetailGallerySingle {
+  grid-template-columns: 1fr;
+  grid-template-rows: 430px;
+}
+
+.stayDetailGallerySingle .stayDetailGalleryMain {
+  grid-column: 1;
+  grid-row: 1;
+  border-radius: 16px;
+}
+
+/* Galería parcial (2-4 fotos): imagen principal como bloque */
+.stayDetailGalleryPartial {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 215px 215px;
+}
+
+.stayDetailGalleryPartial .stayDetailGalleryMain {
+  grid-column: span 1;
+  grid-row: span 2;
+}
+
+/* ══ LIGHTBOX ════════════════════════════════════════════════════ */
+.stayGalleryLightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: lightboxIn 0.22s ease;
+}
+
+@keyframes lightboxIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.stayGalleryLightboxInner {
+  background: #fff;
+  border-radius: 20px;
+  max-width: 920px;
+  width: 100%;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: lightboxSlide 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes lightboxSlide {
+  from { transform: scale(0.96) translateY(12px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.stayGalleryLightboxTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.stayGalleryLightboxClose {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1a1a1a;
+  transition: background 0.15s;
+}
+
+.stayGalleryLightboxClose:hover {
+  background: #f0f0f0;
+}
+
+.stayGalleryLightboxCounter {
+  font-size: 14px;
+  font-weight: 700;
+  color: #555;
+}
+
+/* Escenario central con flechas */
+.stayGalleryLightboxStage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 0;
+  background: #111;
+  position: relative;
+}
+
+.stayGalleryLightboxImg {
+  max-width: calc(100% - 100px);
+  max-height: 56vh;
+  object-fit: contain;
+  border-radius: 6px;
+  display: block;
+  animation: imgFade 0.2s ease;
+}
+
+@keyframes imgFade {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.stayGalleryNavBtn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.16s, transform 0.14s;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.stayGalleryNavPrev { left: 14px; }
+.stayGalleryNavNext { right: 14px; }
+
+.stayGalleryNavBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.stayGalleryNavBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Tira de miniaturas */
+.stayGalleryThumbs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 1px solid #eee;
+  scrollbar-width: thin;
+}
+
+.stayGalleryThumb {
+  flex-shrink: 0;
+  width: 70px;
+  height: 52px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2.5px solid transparent;
+  padding: 0;
+  background: none;
+  transition: border-color 0.16s, transform 0.15s;
+}
+
+.stayGalleryThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.stayGalleryThumb.isActive {
+  border-color: #ff385c;
+  transform: scale(1.06);
+}
+
+.stayGalleryThumb:hover:not(.isActive) {
+  border-color: #ccc;
 }
 
 .stayDetailBody {
@@ -317,7 +562,7 @@
   z-index: 10;
   background: rgba(15, 25, 45, 0.82);
   color: #fff;
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
   padding: 8px 14px;
   font-size: 13px;
@@ -625,6 +870,7 @@
     transform: translateY(8px) scale(0.985);
     filter: blur(2px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -647,20 +893,15 @@
     width: calc(100% - 24px);
   }
 
+  /* En móvil: la galería se apila — imagen grande arriba, tiles debajo en 2 columnas */
   .stayDetailGallery {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 230px repeat(2, 150px);
+    grid-template-rows: 240px 140px 140px;
   }
 
   .stayDetailGalleryMain {
     grid-column: span 2;
-    grid-row: auto;
-    border-radius: 16px 16px 0 0;
-  }
-
-  .stayDetailGalleryTile:nth-child(3),
-  .stayDetailGalleryTile:nth-child(5) {
-    border-radius: 0;
+    grid-row: 1;
   }
 
   .stayDetailReviewsGrid,
@@ -672,6 +913,23 @@
   .stayDetailReviewsHeader {
     font-size: 30px;
   }
+
+  /* Lightbox en móvil */
+  .stayGalleryLightboxInner {
+    border-radius: 14px;
+    max-height: 96vh;
+  }
+
+  .stayGalleryLightboxImg {
+    max-width: calc(100% - 70px);
+    max-height: 46vh;
+  }
+
+  .stayGalleryNavBtn {
+    width: 38px;
+    height: 38px;
+    font-size: 22px;
+  }
 }
 
 @media (max-width: 420px) {
@@ -680,9 +938,27 @@
     transform-origin: top center;
   }
 }
- 
- . s t a y D e t a i l G a l l e r y P a r t i a l   {   d i s p l a y :   b l o c k ;   b o r d e r - r a d i u s :   1 8 p x ;   o v e r f l o w :   h i d d e n ;   } 
- 
- 
- .stayDetailGalleryPartial { display: block; border-radius: 18px; overflow: hidden; }
-.stayDetailGalleryPartial .stayDetailGalleryMain { border-radius: 18px; }
+
+
+
+/* Skeleton de carga para la galería */
+@keyframes skeletonShimmer {
+  0% { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+
+.stayDetailGallerySkeleton {
+  pointer-events: none;
+}
+
+.stayDetailSkeletonBlock {
+  background: linear-gradient(
+    90deg,
+    #e2eaf5 25%,
+    #f0f5ff 50%,
+    #e2eaf5 75%
+  );
+  background-size: 600px 100%;
+  animation: skeletonShimmer 1.4s infinite linear;
+  border-radius: 14px;
+}

@@ -98,6 +98,7 @@ function HostDashboardPage() {
     country: "United States",
     visibility: "Approximate location shown to public",
     basePrice: "850",
+    currency: "COP",
     weeklyDiscount: "15",
     cleaningFee: "120",
     amenities: {
@@ -119,6 +120,7 @@ function HostDashboardPage() {
     country: "",
     visibility: "Approximate location shown to public",
     basePrice: "",
+    currency: "COP",
     weeklyDiscount: "",
     cleaningFee: "",
     amenities: {
@@ -439,6 +441,7 @@ function HostDashboardPage() {
               country: parsedCountry,
               visibility: "Approximate location",
               basePrice: item.price_per_night?.toString() || "0",
+              currency: item.currency || "COP",
               weeklyDiscount: "0",
               cleaningFee: "0",
               amenities: {
@@ -455,7 +458,7 @@ function HostDashboardPage() {
               hostAvatar:
                   "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80",
               status: item.status === "available" ? "Publicado" : "Borrador",
-              rating: 4.8,
+              rating: item.average_rating ? String(item.average_rating) : "Nuevo",
               reservations: 0,
             };
           });
@@ -698,6 +701,7 @@ function HostDashboardPage() {
       department: listing.department || "",
       visibility: listing.visibility,
       basePrice: listing.basePrice,
+      currency: listing.currency || "COP",
       weeklyDiscount: listing.weeklyDiscount,
       cleaningFee: listing.cleaningFee,
       amenities: {
@@ -1789,11 +1793,29 @@ function HostDashboardPage() {
       <div className="hostEditorSectionHeader">
         <h2>Precio y disponibilidad</h2>
       </div>
-      <section className="hostPricingGrid">
+      <section className="hostPricingGrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <article className="hostPricingCard">
+          <p>DIVISA / MONEDA</p>
+          <div className="hostSelectMock" style={{ margin: '8px 0 10px' }}>
+            <select
+              className="hostSelectField"
+              value={editListingForm.currency || "COP"}
+              onChange={(event) => updateEditField("currency", event.target.value)}
+            >
+              <option value="COP">COP ($ - Pesos Colombianos)</option>
+              <option value="USD">USD ($ - Dólares)</option>
+              <option value="EUR">EUR (€ - Euros)</option>
+            </select>
+            <ChevronDown size={15} />
+          </div>
+        </article>
+
         <article className="hostPricingCard">
           <p>PRECIO BASE</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 10px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#2d3138' }}>$</span>
+            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#2d3138' }}>
+              {editListingForm.currency === 'EUR' ? '€' : '$'}
+            </span>
             <input
               type="text"
               className="hostPricingInput"
@@ -1815,7 +1837,6 @@ function HostDashboardPage() {
           </div>
           <button type="button">Ajustar</button>
         </article>
-
       </section>
 
       <div className="hostEditorSectionHeader">
@@ -2153,11 +2174,29 @@ function HostDashboardPage() {
       <div className="hostEditorSectionHeader">
         <h2>Precio y disponibilidad</h2>
       </div>
-      <section className="hostPricingGrid">
+      <section className="hostPricingGrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <article className="hostPricingCard">
+          <p>DIVISA / MONEDA</p>
+          <div className="hostSelectMock" style={{ margin: '8px 0 10px' }}>
+            <select
+              className="hostSelectField"
+              value={newListingForm.currency || "COP"}
+              onChange={(event) => updateNewField("currency", event.target.value)}
+            >
+              <option value="COP">COP ($ - Pesos Colombianos)</option>
+              <option value="USD">USD ($ - Dólares)</option>
+              <option value="EUR">EUR (€ - Euros)</option>
+            </select>
+            <ChevronDown size={15} />
+          </div>
+        </article>
+
         <article className="hostPricingCard">
           <p>PRECIO BASE</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 10px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#2d3138' }}>$</span>
+            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#2d3138' }}>
+              {newListingForm.currency === 'EUR' ? '€' : '$'}
+            </span>
             <input
               type="text"
               className="hostPricingInput"
@@ -2178,7 +2217,6 @@ function HostDashboardPage() {
             />
           </div>
         </article>
-
       </section>
 
       <div className="hostEditorSectionHeader">
