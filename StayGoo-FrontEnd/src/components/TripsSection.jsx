@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShieldCheck, Star } from "lucide-react";
 import { useAuthUser } from "../useAuthUser";
-import { getMyBookings } from "../api";
+import { getMyBookings, createReview } from "../api";
+import Swal from "sweetalert2";
 
 export function TripsSection() {
   const user = useAuthUser();
@@ -83,6 +84,58 @@ export function TripsSection() {
     changeReservation((prev) => (prev + 1) % programmedReservations.length);
   };
 
+  const handleWriteReview = async (res) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Escribir reseña',
+      html:
+        '<div style="text-align:left; font-family: sans-serif;">' +
+        '<label style="display:block;margin-bottom:5px;font-weight:600;font-size:14px;color:#333;">Calificación (1-5 estrellas):</label>' +
+        '<select id="swal-rating" class="swal2-input" style="margin-bottom:15px; width:100%; box-sizing:border-box; border-radius:8px;">' +
+          '<option value="5">★★★★★ (5 - Excelente)</option>' +
+          '<option value="4">★★★★☆ (4 - Muy bueno)</option>' +
+          '<option value="3">★★★☆☆ (3 - Promedio)</option>' +
+          '<option value="2">★★☆☆☆ (2 - Malo)</option>' +
+          '<option value="1">★☆☆☆☆ (1 - Horrible)</option>' +
+        '</select>' +
+        '<label style="display:block;margin-bottom:5px;font-weight:600;font-size:14px;color:#333;">Comentario:</label>' +
+        '<textarea id="swal-comment" class="swal2-textarea" placeholder="Cuéntanos tu experiencia sobre este alojamiento..." style="width:100%;height:100px;margin:0;box-sizing:border-box;border-radius:8px;"></textarea>' +
+        '</div>',
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Enviar reseña',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#ff385c',
+      preConfirm: () => {
+        const ratingVal = parseInt(document.getElementById('swal-rating').value, 10);
+        const commentVal = document.getElementById('swal-comment').value;
+        if (!ratingVal || ratingVal < 1 || ratingVal > 5) {
+          Swal.showValidationMessage('La calificación debe ser entre 1 y 5');
+          return false;
+        }
+        if (!commentVal.trim()) {
+          Swal.showValidationMessage('El comentario no puede estar vacío');
+          return false;
+        }
+        return { rating: ratingVal, comment: commentVal };
+      }
+    });
+
+    if (formValues) {
+      try {
+        await createReview({
+          id_booking: res.id,
+          rating: formValues.rating,
+          comment: formValues.comment,
+          date: new Date().toISOString().split('T')[0]
+        });
+        Swal.fire('¡Gracias!', 'Tu reseña ha sido guardada con éxito.', 'success');
+      } catch (err) {
+        console.error("Error al enviar la reseña:", err);
+        Swal.fire('Error', err.message || 'No se pudo guardar la reseña.', 'error');
+      }
+    }
+  };
+
   // Safe fallback if user.name contains "undefined"
   const displayName = (typeof user?.name === "string" && !user.name.includes("undefined")) ? user.name : "Viajero";
 
@@ -133,6 +186,14 @@ export function TripsSection() {
               </span>
               <ChevronRight size={16} />
             </button>
+            {currentReservation.id !== "no-res" && (
+              <button type="button" onClick={() => handleWriteReview(currentReservation)}>
+                <span style={{ display: 'flex', alignItems: 'center' }}>
+                  <Star size={14} style={{ fill: '#ff385c', stroke: '#ff385c', marginRight: '6px' }} /> Escribir reseña
+                </span>
+                <ChevronRight size={16} />
+              </button>
+            )}
           </aside>
 
           <div className="spotlightOverlay">

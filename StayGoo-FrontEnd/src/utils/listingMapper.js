@@ -24,6 +24,19 @@ export function extractHousingsList(payload) {
   return [];
 }
 
+export const formatCurrencyPrice = (price, currency) => {
+  const curr = String(currency || 'COP').toUpperCase();
+  const numericPrice = Number(price) || 0;
+  if (curr === 'COP') {
+    return `$${numericPrice.toLocaleString('es-CO')}`;
+  } else if (curr === 'USD') {
+    return `$${numericPrice.toLocaleString('en-US')} USD`;
+  } else if (curr === 'EUR') {
+    return `€${numericPrice.toLocaleString('de-DE')}`;
+  }
+  return `$${numericPrice.toLocaleString()} ${curr}`;
+};
+
 export function mapHousingToListing(item, index = 0) {
   const typeName = item.type_housing ? item.type_housing.name : "";
   const mappedCategory = categoryMap[typeName] || "luxury";
@@ -38,6 +51,7 @@ export function mapHousingToListing(item, index = 0) {
 
   return {
     id: String(item.id_housing),
+    realId: item.id_housing,   // ← numérico, usado por getHousingById en StayDetailPage
     title: item.name || "Sin título",
     category: mappedCategory,
     city,
@@ -46,14 +60,18 @@ export function mapHousingToListing(item, index = 0) {
     status: item.status || "available",
     location: address ? `${address}, ${city}` : city,
     maxGuests: item.capacity || 2,
-    price: `$${item.price_per_night || 0}`,
-    rating: 4.8,
+    price: formatCurrencyPrice(item.price_per_night, item.currency),
+    currency: item.currency || 'COP',
+    rating: item.average_rating ? String(item.average_rating) : "Nuevo",
     featured: index < 3,
     image: firstImage,
     housing_images: images,
     hostName: Array.isArray(item.host)
       ? item.host[0]?.name || "Anfitrión"
       : item.host?.name || "Anfitrión",
+    hostAvatar: Array.isArray(item.host)
+      ? item.host[0]?.avatar || ""
+      : item.host?.avatar || "",
     isSuperHost: true,
   };
 }

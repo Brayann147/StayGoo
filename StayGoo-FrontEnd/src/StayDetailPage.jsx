@@ -11,6 +11,7 @@ import {
   toggleFavoriteId,
   FAVORITES_CHANGED_EVENT,
 } from "./utils/favoritesStorage";
+import { formatCurrencyPrice } from "./utils/listingMapper";
 
 registerLocale("es", es);
 
@@ -26,6 +27,18 @@ const formatPrice = (rawPrice) => {
 };
 
 const getGallery = (stay) => {
+  // Prioridad 1: housing_images del API (array completo con todos los objetos)
+  if (Array.isArray(stay.housing_images) && stay.housing_images.length > 0) {
+    const normal = stay.housing_images
+      .filter(img => !img.is_panorama)
+      .map(img => img.image_url)
+      .filter(Boolean);
+    if (normal.length > 0) {
+      return Array.from(new Set(normal));
+    }
+  }
+
+  // Prioridad 2: Fallback a campos sueltos (cuando aún no llegó el fetch del API)
   const source = [];
   if (Array.isArray(stay.housing_images)) {
     const normal = stay.housing_images.filter(img => !img.is_panorama).map(img => img.image_url);
@@ -127,6 +140,8 @@ function StayDetailPage() {
         console.error("Error fetching latest stay details:", err);
       }
     };
+    setImagesLoaded(false);  // ← Resetear al cambiar alojamiento
+    setReviews([]);          // ← Resetear reseñas al cambiar alojamiento
     fetchLatestDetails();
   }, [stayData]);
 
@@ -207,7 +222,14 @@ function StayDetailPage() {
   const gallery = getGallery(stay);
   const panoramaList = getPanoramaList(stay);
   const summaryPrice = Number(String(price).replace(/[^0-9.]/g, "")) || 280;
-  const hostName = clean(stay.hostName, "Anfitrión");
+  const hostName = clean(
+    (Array.isArray(stay.host) ? stay.host[0]?.name : stay.host?.name) || stay.hostName,
+    "Anfitrión"
+  );
+  const hostAvatar = clean(
+    (Array.isArray(stay.host) ? stay.host[0]?.avatar : stay.host?.avatar) || stay.hostAvatar,
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"
+  );
   const isSuperHost = stay.isSuperHost ?? true;
   const avgRating = reviews.length > 0
     ? (reviews.reduce((acc, r) => acc + (r.rating || 0), 0) / reviews.length).toFixed(1)
@@ -292,6 +314,9 @@ function StayDetailPage() {
               <button
                 className={`stayDetailQuickBtn ${isFavorite ? "stayDetailFavoriteActive" : ""}`}
                 type="button"
+              <button
+                className={`stayDetailQuickBtn ${isFavorite ? "stayDetailFavoriteActive" : ""}`}
+                type="button"
                 onClick={handleToggleFavorite}
                 style={isFavorite ? { color: "#ff815f" } : {}}
               >
@@ -327,10 +352,10 @@ function StayDetailPage() {
             <article>
               <div className="stayDetailHostingRow">
                 <div>
-                  <h2>Villa completa, anfitrion: {hostName}</h2>
+                  <h2>Villa completa, anfitrión: {hostName}</h2>
                   <p>{maxGuests} huespedes <span className="stayDetailDotSep" /> 4 dormitorios <span className="stayDetailDotSep" /> 5 camas <span className="stayDetailDotSep" /> 4.5 baños</p>
                 </div>
-                <img className="stayDetailHostBadge" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80" alt="Perfil del anfitrion" />
+                <img className="stayDetailHostBadge" src={hostAvatar} alt="Perfil del anfitrión" />
               </div>
             </article>
 
@@ -493,7 +518,7 @@ function StayDetailPage() {
           </div>{/* fin stayDetailLeftCol */}
 
           <aside className="stayDetailBookingCard">
-            <h3 className="stayDetailBookingPrice">${summaryPrice.toLocaleString()} <span>/ noche</span></h3>
+            <h3 className="stayDetailBookingPrice">{formatCurrencyPrice(summaryPrice, stay.currency)} <span>/ noche</span></h3>
             <div className="stayDetailBookingForm">
               <div className="stayDetailBookingDates">
                 <div className="stayDetailBookingField">
@@ -543,8 +568,14 @@ function StayDetailPage() {
             <p className="stayDetailSubNote">Aun no se te cobrara</p>
 
             <div className="stayDetailPriceBreakdown">
-              <span className="stayDetailPriceRow"><span>${summaryPrice} x {nights} noches</span><span>${(summaryPrice * nights).toLocaleString()}</span></span>
-              <span className="stayDetailPriceRow stayDetailPriceTotal"><span>Total antes de impuestos</span><span>${total.toLocaleString()}</span></span>
+              <span className="stayDetailPriceRow">
+                <span>{formatCurrencyPrice(summaryPrice, stay.currency)} x {nights} {nights === 1 ? "noche" : "noches"}</span>
+                <span>{formatCurrencyPrice(summaryPrice * nights, stay.currency)}</span>
+              </span>
+              <span className="stayDetailPriceRow stayDetailPriceTotal">
+                <span>Total antes de impuestos</span>
+                <span>{formatCurrencyPrice(total, stay.currency)}</span>
+              </span>
             </div>
 
             <p className="stayDetailPriceTip">Este alojamiento es una joya poco comun. Lugares similares suelen reservarse con meses de anticipacion.</p>

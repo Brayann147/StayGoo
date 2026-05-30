@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUserById, updateUser, getRoles, getMyProfile } from '../controllers/user.controller.js';
+import { getUserById, updateUser, getRoles, getMyProfile, uploadAvatar, uploadAvatarMiddleware } from '../controllers/user.controller.js';
 import { register } from '../controllers/auth.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
 
@@ -10,6 +10,9 @@ router.post('/', register);
 
 // GET /api/users/me  → Consultar perfil propio (protegido)
 router.get('/me', authenticate, getMyProfile);
+
+// POST /api/users/me/avatar  → Subir foto de perfil (protegido)
+router.post('/me/avatar', authenticate, uploadAvatarMiddleware.single('avatar'), uploadAvatar);
 
 // GET /api/users/:id_user  → Consultar perfil (público)
 router.get('/:id_user', getUserById);

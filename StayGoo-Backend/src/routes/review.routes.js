@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createReview, getReviewsByBooking, getReviewsByHousing } from '../controllers/review.controller.js'
 import {
     createReview,
+    getReviews,
     getReviewsByBooking
 } from '../controllers/review.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
@@ -19,3 +20,4 @@ router.get('/housing/:id_housing', getReviewsByHousing);
 router.get('/:id_booking', getReviewsByBooking);
 
 export default router;
+
