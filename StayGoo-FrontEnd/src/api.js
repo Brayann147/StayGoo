@@ -290,3 +290,167 @@ export async function uploadHousingImage(idHousing, file, isPanorama) {
   return data;
 }
 
+// ── GEOGRAPHICAL SERVICES ────────────────────────────────────────────────────────
+
+const countryCodeToName = {
+  "AR": "Argentina",
+  "BO": "Bolivia",
+  "BR": "Brazil",
+  "CA": "Canada",
+  "CL": "Chile",
+  "CO": "Colombia",
+  "CR": "Costa Rica",
+  "CU": "Cuba",
+  "EC": "Ecuador",
+  "SV": "El Salvador",
+  "ES": "Spain",
+  "US": "United States",
+  "GT": "Guatemala",
+  "HN": "Honduras",
+  "MX": "Mexico",
+  "NI": "Nicaragua",
+  "PA": "Panama",
+  "PY": "Paraguay",
+  "PE": "Peru",
+  "PR": "Puerto Rico",
+  "DO": "Dominican Republic",
+  "UY": "Uruguay",
+  "VE": "Venezuela"
+};
+
+// Fallback data in case the external API is unreachable or rate limited
+const FALLBACK_DEPARTMENTS = {
+  "CO": [
+    { name: "Antioquia", adminCode1: "Antioquia" },
+    { name: "Bogotá D.C.", adminCode1: "Bogota" },
+    { name: "Valle del Cauca", adminCode1: "Valle del Cauca" },
+    { name: "Atlántico", adminCode1: "Atlantico" },
+    { name: "Bolívar", adminCode1: "Bolivar" },
+    { name: "Cundinamarca", adminCode1: "Cundinamarca" },
+    { name: "Santander", adminCode1: "Santander" }
+  ],
+  "AR": [
+    { name: "Buenos Aires", adminCode1: "Buenos Aires" },
+    { name: "Córdoba", adminCode1: "Cordoba" },
+    { name: "Santa Fe", adminCode1: "Santa Fe" },
+    { name: "Mendoza", adminCode1: "Mendoza" }
+  ],
+  "MX": [
+    { name: "Ciudad de México", adminCode1: "Ciudad de Mexico" },
+    { name: "Jalisco", adminCode1: "Jalisco" },
+    { name: "Nuevo León", adminCode1: "Nuevo Leon" },
+    { name: "Quintana Roo", adminCode1: "Quintana Roo" }
+  ],
+  "US": [
+    { name: "California", adminCode1: "California" },
+    { name: "Florida", adminCode1: "Florida" },
+    { name: "New York", adminCode1: "New York" },
+    { name: "Texas", adminCode1: "Texas" }
+  ],
+  "ES": [
+    { name: "Madrid", adminCode1: "Madrid" },
+    { name: "Cataluña", adminCode1: "Catalonia" },
+    { name: "Andalucía", adminCode1: "Andalusia" },
+    { name: "Comunidad Valenciana", adminCode1: "Valencia" }
+  ]
+};
+
+const FALLBACK_CITIES = {
+  "CO_Antioquia": ["Medellín", "Envigado", "Sabaneta", "Itagüí", "Rionegro", "Bello"],
+  "CO_Bogota": ["Bogotá"],
+  "CO_Valle del Cauca": ["Cali", "Palmira", "Buga", "Tuluá"],
+  "CO_Atlantico": ["Barranquilla", "Soledad", "Puerto Colombia"],
+  "CO_Bolivar": ["Cartagena", "Magangué", "Turbaco"],
+  "CO_Cundinamarca": ["Soacha", "Chía", "Zipaquirá", "Facatativá"],
+  "CO_Santander": ["Bucaramanga", "Floridablanca", "Girón", "Barrancabermeja"],
+  
+  "AR_Buenos Aires": ["Buenos Aires", "La Plata", "Mar del Plata", "Bahía Blanca"],
+  "AR_Cordoba": ["Córdoba", "Villa Carlos Paz", "Río Cuarto"],
+  
+  "MX_Ciudad de Mexico": ["Ciudad de México"],
+  "MX_Jalisco": ["Guadalajara", "Zapopan", "Puerto Vallarta"],
+  
+  "US_California": ["Los Angeles", "San Francisco", "San Diego", "San Jose"],
+  "US_Florida": ["Miami", "Orlando", "Tampa", "Fort Lauderdale"],
+  "US_New York": ["New York City", "Buffalo", "Rochester", "Albany"],
+  
+  "ES_Madrid": ["Madrid", "Alcalá de Henares", "Móstoles"],
+  "ES_Catalonia": ["Barcelona", "Girona", "Tarragona", "Lleida"]
+};
+
+/**
+ * Obtener los departamentos/estados de un país.
+ * @param {string} countryCode - Código ISO de 2 letras del país (ej. "CO")
+ */
+export async function fetchDepartmentsByCountry(countryCode) {
+  const countryName = countryCodeToName[countryCode];
+  if (!countryName) {
+    return FALLBACK_DEPARTMENTS[countryCode] || [];
+  }
+  try {
+    const response = await fetch("https://countriesnow.space/api/v0.1/countries/states", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ country: countryName })
+    });
+    if (!response.ok) throw new Error("API response error");
+    const result = await response.json();
+    if (result.error || !result.data || !result.data.states) {
+      throw new Error(result.msg || "Error from API");
+    }
+    return result.data.states.map(state => {
+      const displayName = state.name
+        .replace(/\bDepartment\b/gi, "")
+        .replace(/\bProvince\b/gi, "")
+        .replace(/\bState\b/gi, "")
+        .trim();
+      return {
+        name: displayName || state.name,
+        adminCode1: state.name
+      };
+    });
+  } catch (error) {
+    console.warn(`Error fetching departments for ${countryCode}, using local fallback.`, error);
+    return FALLBACK_DEPARTMENTS[countryCode] || [];
+  }
+}
+
+/**
+ * Obtener las ciudades de un departamento/estado.
+ * @param {string} countryCode - Código ISO de 2 letras del país (ej. "CO")
+ * @param {string} adminCode1 - Nombre o código del departamento (ej. "Antioquia")
+ */
+export async function fetchCitiesByDepartment(countryCode, adminCode1) {
+  const countryName = countryCodeToName[countryCode];
+  if (!countryName) {
+    const fallbackKey = `${countryCode}_${adminCode1}`;
+    return (FALLBACK_CITIES[fallbackKey] || []).map(city => ({ name: city }));
+  }
+  try {
+    const response = await fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ country: countryName, state: adminCode1 })
+    });
+    if (!response.ok) throw new Error("API response error");
+    const result = await response.json();
+    if (result.error || !result.data) {
+      throw new Error(result.msg || "Error from API");
+    }
+    return result.data.map(cityName => ({ name: cityName }));
+  } catch (error) {
+    console.warn(`Error fetching cities for ${countryCode} - ${adminCode1}, using local fallback.`, error);
+    const fallbackKey = `${countryCode}_${adminCode1}`;
+    const fallbackCities = FALLBACK_CITIES[fallbackKey] || [];
+    if (fallbackCities.length > 0) {
+      return fallbackCities.map(city => ({ name: city }));
+    }
+    return [{ name: adminCode1.replace(/\bDepartment\b/gi, "").trim() }];
+  }
+}
+
+
