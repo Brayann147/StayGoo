@@ -69,6 +69,9 @@ export function mapHousingToListing(item, index = 0) {
     hostName: Array.isArray(item.host)
       ? item.host[0]?.name || "Anfitrión"
       : item.host?.name || "Anfitrión",
+    hostAvatar: Array.isArray(item.host)
+      ? item.host[0]?.avatar || ""
+      : item.host?.avatar || "",
     isSuperHost: true,
   };
 }

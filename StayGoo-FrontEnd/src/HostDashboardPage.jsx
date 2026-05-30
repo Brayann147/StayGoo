@@ -207,9 +207,13 @@ function HostDashboardPage() {
   const [selectedReservationListingId, setSelectedReservationListingId] = useState("lst-1");
   const [reservationViewDate, setReservationViewDate] = useState(new Date(2024, 9, 1));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState("2024-10-01");
-  const [hostPhoto, setHostPhoto] = useState(
-    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80"
-  );
+  const [hostPhoto, setHostPhoto] = useState(() => {
+    try {
+      return window.localStorage.getItem("staygooUserPhoto") || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80";
+    } catch {
+      return "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80";
+    }
+  });
   const [selectedMessageGuestName, setSelectedMessageGuestName] = useState(null);
   const [earningsView, setEarningsView] = useState("monthly");
   const [selectedEarningsListing, setSelectedEarningsListing] = useState(null);
@@ -397,6 +401,12 @@ function HostDashboardPage() {
       setIsProcessing(true);
       const userProfile = await getMyProfile();
       const userId = userProfile?.id_user;
+      if (userProfile?.avatar) {
+        setHostPhoto(userProfile.avatar);
+        try {
+          window.localStorage.setItem("staygooUserPhoto", userProfile.avatar);
+        } catch (e) {}
+      }
       const data = await getHousings();
       
       if (data && Array.isArray(data)) {
@@ -454,9 +464,8 @@ function HostDashboardPage() {
               },
               coverImage: firstImage,
               housing_images: images,
-              hostName: "Mi Alojamiento",
-              hostAvatar:
-                  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80",
+              hostName: userProfile?.name || "Anfitrión",
+              hostAvatar: userProfile?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80",
               status: item.status === "available" ? "Publicado" : "Borrador",
               rating: item.average_rating ? String(item.average_rating) : "Nuevo",
               reservations: 0,

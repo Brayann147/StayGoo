@@ -237,8 +237,14 @@ function StayDetailPage() {
   const gallery = getGallery(stay);
   const panoramaSrc = getPanoramaSrc(stay, gallery[0]);
   const summaryPrice = Number(String(price).replace(/[^0-9.]/g, "")) || 280;
-  const hostName = clean(stay.host?.name || stay.hostName, "Anfitrión");
-  const hostAvatar = clean(stay.host?.avatar, "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80");
+  const hostName = clean(
+    (Array.isArray(stay.host) ? stay.host[0]?.name : stay.host?.name) || stay.hostName,
+    "Anfitrión"
+  );
+  const hostAvatar = clean(
+    (Array.isArray(stay.host) ? stay.host[0]?.avatar : stay.host?.avatar) || stay.hostAvatar,
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"
+  );
   const isSuperHost = stay.isSuperHost ?? true;
 
   const defaultCheckIn = useMemo(() => new Date(), []);
