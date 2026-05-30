@@ -5,37 +5,34 @@ import { es } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import "./StayDetailPage.css";
 import PanoramaViewer from "./PanoramaViewer";
-import { getHousingById } from "./api";
+import { getHousingById, getReviewsByHousing } from "./api";
 import {
   isFavorite as isListingFavorite,
   toggleFavoriteId,
   FAVORITES_CHANGED_EVENT,
 } from "./utils/favoritesStorage";
+import { formatCurrencyPrice } from "./utils/listingMapper";
 
 registerLocale("es", es);
 
-const defaultGallery = [
-  "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80",
-  "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80"
-];
-
-const defaultReviews = [
-  {
-    name: "Mariana Torres",
-    date: "Octubre 2023",
-    text: "Increible estancia. Las fotos no alcanzan a mostrar lo bien que se disfruta la vista desde la terraza.",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&q=80"
-  },
-  {
-    name: "Sofia Ramirez",
-    date: "Septiembre 2023",
-    text: "De las mejores estadias que he tenido. Todo se siente premium pero al mismo tiempo muy acogedor.",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"
+const mapRealReview = (r) => {
+  let formattedDate = "Reciente";
+  if (r.date) {
+    try {
+      const d = new Date(r.date);
+      const options = { month: "long", year: "numeric" };
+      formattedDate = d.toLocaleDateString("es-ES", options);
+      formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+    } catch (e) {}
   }
-];
+  return {
+    name: r.booking?.user?.name || "Huésped de StayGo",
+    date: formattedDate,
+    text: r.comment || "",
+    rating: r.rating || 5,
+    avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80`
+  };
+};
 
 const clean = (value, fallback) => {
   if (value === null || value === undefined || value === "") {
@@ -55,23 +52,32 @@ const formatPrice = (rawPrice) => {
 };
 
 const getGallery = (stay) => {
+  // Prioridad 1: housing_images del API (array completo con todos los objetos)
+  if (Array.isArray(stay.housing_images) && stay.housing_images.length > 0) {
+    const normal = stay.housing_images
+      .filter(img => !img.is_panorama)
+      .map(img => img.image_url)
+      .filter(Boolean);
+    if (normal.length > 0) {
+      return Array.from(new Set(normal));
+    }
+  }
+
+  // Prioridad 2: Fallback a campos sueltos (cuando aún no llegó el fetch del API)
   const source = [];
-  if (Array.isArray(stay.housing_images)) {
-    const normal = stay.housing_images.filter(img => !img.is_panorama).map(img => img.image_url);
-    source.push(...normal);
-  }
-  if (Array.isArray(stay.gallery)) {
-    source.push(...stay.gallery);
-  }
-  if (stay.image) {
+  if (stay.image && !stay.image.includes('unsplash')) {
     source.push(stay.image);
   }
-  if (stay.coverImage) {
+  if (stay.coverImage && !stay.coverImage.includes('unsplash')) {
     source.push(stay.coverImage);
+  }
+  if (Array.isArray(stay.gallery)) {
+    const validGallery = stay.gallery.filter(g => typeof g === 'string' && !g.includes('unsplash'));
+    source.push(...validGallery);
   }
 
   const unique = Array.from(new Set(source.filter(Boolean)));
-  return [...unique, ...defaultGallery].slice(0, 5);
+  return unique.slice(0, 5);
 };
 
 const getPanoramaSrc = (stay, defaultSrc) => {
@@ -125,6 +131,8 @@ function StayDetailPage() {
   }, [location.search]);
 
   const [stay, setStay] = useState(stayData ?? {});
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     if (stayData) {
@@ -141,7 +149,7 @@ function StayDetailPage() {
           if (latest) {
             const images = latest.housing_images || [];
             const normalImages = images.filter(img => !img.is_panorama);
-            const firstImage = normalImages.length > 0 ? normalImages[0].image_url : "https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=1200&q=80";
+            const firstImage = normalImages.length > 0 ? normalImages[0].image_url : "";
 
             setStay(prev => ({
               ...prev,
@@ -149,16 +157,33 @@ function StayDetailPage() {
               title: latest.name || prev.title,
               location: latest.address ? `${latest.address}, ${latest.city}` : latest.city || prev.location,
               maxGuests: latest.capacity || prev.maxGuests,
-              price: `$${latest.price_per_night || 0}/noche`,
+              price: `${formatCurrencyPrice(latest.price_per_night, latest.currency)}/noche`,
               image: firstImage,
-              housing_images: images
+              housing_images: images  // ← Array completo con TODAS las fotos normales y panorámicas
             }));
+          }
+
+          // Fetch real reviews
+          try {
+            const fetched = await getReviewsByHousing(id);
+            if (Array.isArray(fetched)) {
+              setReviews(fetched);
+            }
+          } catch (err) {
+            console.error("Error fetching reviews:", err);
           }
         } catch (err) {
           console.error("Error fetching latest stay details:", err);
+        } finally {
+          setImagesLoaded(true);  // ← Marcar como cargado aunque haya error
         }
+      } else {
+        // Sin ID para buscar: usar datos del URL directamente
+        setImagesLoaded(true);
       }
     };
+    setImagesLoaded(false);  // ← Resetear al cambiar alojamiento
+    setReviews([]);          // ← Resetear reseñas al cambiar alojamiento
     fetchLatestDetails();
   }, [stayData]);
 
@@ -192,7 +217,13 @@ function StayDetailPage() {
 
   const title = clean(stay.title, "Villa Horizonte");
   const locationName = clean(stay.location, clean(stay.cityRegion, "Santorini, Grecia"));
-  const rating = clean(stay.rating, "4.9");
+  const reviewCount = reviews.length;
+  const computedRating = useMemo(() => {
+    if (reviews.length === 0) return null;
+    const totalRating = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+    return (totalRating / reviews.length).toFixed(1);
+  }, [reviews]);
+  const rating = computedRating ? String(computedRating) : "Nuevo";
   const maxGuests = clean(stay.maxGuests, "2");
   const maxGuestsNumber = Math.max(Number(maxGuests) || 2, 1);
   const price = formatPrice(clean(stay.price, "$280/noche"));
@@ -206,7 +237,14 @@ function StayDetailPage() {
   const gallery = getGallery(stay);
   const panoramaSrc = getPanoramaSrc(stay, gallery[0]);
   const summaryPrice = Number(String(price).replace(/[^0-9.]/g, "")) || 280;
-  const hostName = clean(stay.hostName, "Anfitrión");
+  const hostName = clean(
+    (Array.isArray(stay.host) ? stay.host[0]?.name : stay.host?.name) || stay.hostName,
+    "Anfitrión"
+  );
+  const hostAvatar = clean(
+    (Array.isArray(stay.host) ? stay.host[0]?.avatar : stay.host?.avatar) || stay.hostAvatar,
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"
+  );
   const isSuperHost = stay.isSuperHost ?? true;
 
   const defaultCheckIn = useMemo(() => new Date(), []);
@@ -215,6 +253,29 @@ function StayDetailPage() {
   const [checkInDate, setCheckInDate] = useState(defaultCheckIn);
   const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
   const [panoramaOpen, setPanoramaOpen] = useState(false);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const openLightbox = (index = 0) => {
+    setLightboxIndex(index);
+    setShowAllPhotos(true);
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeLightbox = () => {
+    setShowAllPhotos(false);
+    document.body.style.overflow = "";
+  };
+
+  const lightboxPrev = (e) => {
+    e.stopPropagation();
+    setLightboxIndex((prev) => (prev === 0 ? gallery.length - 1 : prev - 1));
+  };
+
+  const lightboxNext = (e) => {
+    e.stopPropagation();
+    setLightboxIndex((prev) => (prev === gallery.length - 1 ? 0 : prev + 1));
+  };
 
   useEffect(() => {
     if (checkOutDate <= checkInDate) {
@@ -251,7 +312,7 @@ function StayDetailPage() {
       checkOut: toIsoDate(checkOutDate)
     }));
 
-    window.open(`/payment-process.html?data=${paymentPayload}`, "staygoo-payment-tab", "noopener,noreferrer");
+    navigate(`/payment?data=${paymentPayload}`);
   };
 
   const setShareStatus = (label) => {
@@ -317,9 +378,9 @@ function StayDetailPage() {
               <button className="stayDetailQuickBtn" type="button" onClick={handleShare} id="detailShareBtn">
                 ↗ <span id="detailShareLabel">Compartir</span>
               </button>
-              <button 
-                className={`stayDetailQuickBtn ${isFavorite ? "stayDetailFavoriteActive" : ""}`} 
-                type="button" 
+              <button
+                className={`stayDetailQuickBtn ${isFavorite ? "stayDetailFavoriteActive" : ""}`}
+                type="button"
                 onClick={handleToggleFavorite}
                 style={isFavorite ? { color: "#ff815f" } : {}}
               >
@@ -328,29 +389,128 @@ function StayDetailPage() {
             </div>
           </div>
           <p className="stayDetailMeta">
-            <span>★ {rating} · 128 reseñas</span>
+            <span>
+              ★ {rating === "Nuevo" ? "Nuevo" : `${rating} · ${reviewCount} ${reviewCount === 1 ? "reseña" : "reseñas"}`}
+            </span>
             <span className="stayDetailDotSep" />
             <span>{locationName}</span>
           </p>
         </header>
 
-        <section className="stayDetailGallery">
-          <div className="stayDetailGalleryMain"><img src={gallery[0]} alt="Vista principal del alojamiento" /></div>
-          <div className="stayDetailGalleryTile"><img src={gallery[1]} alt="Galeria 1" /></div>
-          <div className="stayDetailGalleryTile"><img src={gallery[2]} alt="Galeria 2" /></div>
-          <div className="stayDetailGalleryTile"><img src={gallery[3]} alt="Galeria 3" /></div>
-          <div className="stayDetailGalleryTile"><img src={gallery[4]} alt="Galeria 4" /></div>
-        </section>
+        {!imagesLoaded ? (
+          <section className="stayDetailGallery stayDetailGallerySkeleton">
+            <div className="stayDetailGalleryMain stayDetailSkeletonBlock" />
+            <div className="stayDetailGalleryTile stayDetailSkeletonBlock" />
+            <div className="stayDetailGalleryTile stayDetailSkeletonBlock" />
+            <div className="stayDetailGalleryTile stayDetailSkeletonBlock" />
+            <div className="stayDetailGalleryTile stayDetailSkeletonBlock" />
+          </section>
+        ) : gallery.length > 0 ? (
+          <section className={`stayDetailGallery ${gallery.length === 1 ? "stayDetailGallerySingle" : gallery.length < 5 ? "stayDetailGalleryPartial" : ""}`}>
+            {/* Imagen principal grande */}
+            <div className="stayDetailGalleryMain" onClick={() => openLightbox(0)}>
+              {gallery[0] ? <img src={gallery[0]} alt="Vista principal del alojamiento" /> : null}
+            </div>
+
+            {/* Grid derecho 2x2 */}
+            {gallery[1] && (
+              <div className="stayDetailGalleryTile" onClick={() => openLightbox(1)}>
+                <img src={gallery[1]} alt="Galería foto 2" />
+              </div>
+            )}
+            {gallery[2] && (
+              <div className="stayDetailGalleryTile" onClick={() => openLightbox(2)}>
+                <img src={gallery[2]} alt="Galería foto 3" />
+              </div>
+            )}
+            {gallery[3] && (
+              <div className="stayDetailGalleryTile" onClick={() => openLightbox(3)}>
+                <img src={gallery[3]} alt="Galería foto 4" />
+              </div>
+            )}
+            {gallery[4] ? (
+              <div className="stayDetailGalleryTile stayDetailGalleryLastTile" onClick={() => openLightbox(4)}>
+                <img src={gallery[4]} alt="Galería foto 5" />
+                <button
+                  className="stayDetailShowAllBtn"
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); openLightbox(0); }}
+                  aria-label="Mostrar todas las fotos"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                  Mostrar todas las fotos
+                </button>
+              </div>
+            ) : gallery.length >= 2 ? (
+              /* Si hay menos de 5 fotos, mostrar el botón en la última tile */
+              <div className="stayDetailGalleryTile stayDetailGalleryLastTile" onClick={() => openLightbox(gallery.length - 1)}>
+                <img src={gallery[gallery.length - 1]} alt="Galería última foto" />
+                <button
+                  className="stayDetailShowAllBtn"
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); openLightbox(0); }}
+                  aria-label="Mostrar todas las fotos"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                  Mostrar todas las fotos
+                </button>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* ── Lightbox de galería completa ── */}
+        {showAllPhotos && (
+          <div className="stayGalleryLightbox" onClick={closeLightbox}>
+            <div className="stayGalleryLightboxInner" onClick={(e) => e.stopPropagation()}>
+              <div className="stayGalleryLightboxTopBar">
+                <button className="stayGalleryLightboxClose" type="button" onClick={closeLightbox} aria-label="Cerrar galería">
+                  ✕
+                </button>
+                <span className="stayGalleryLightboxCounter">{lightboxIndex + 1} / {gallery.length}</span>
+              </div>
+
+              <div className="stayGalleryLightboxStage">
+                <button className="stayGalleryNavBtn stayGalleryNavPrev" type="button" onClick={lightboxPrev} aria-label="Foto anterior" disabled={gallery.length <= 1}>
+                  ‹
+                </button>
+                <img
+                  key={lightboxIndex}
+                  src={gallery[lightboxIndex]}
+                  alt={`Foto ${lightboxIndex + 1} de ${gallery.length}`}
+                  className="stayGalleryLightboxImg"
+                />
+                <button className="stayGalleryNavBtn stayGalleryNavNext" type="button" onClick={lightboxNext} aria-label="Foto siguiente" disabled={gallery.length <= 1}>
+                  ›
+                </button>
+              </div>
+
+              <div className="stayGalleryThumbs">
+                {gallery.map((src, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`stayGalleryThumb ${i === lightboxIndex ? "isActive" : ""}`}
+                    onClick={() => setLightboxIndex(i)}
+                    aria-label={`Ver foto ${i + 1}`}
+                  >
+                    <img src={src} alt={`Miniatura ${i + 1}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className="stayDetailBody">
           <div className="stayDetailLeftCol">
             <article>
               <div className="stayDetailHostingRow">
                 <div>
-                  <h2>Villa completa, anfitrion: {hostName}</h2>
+                  <h2>Villa completa, anfitrión: {hostName}</h2>
                   <p>{maxGuests} huespedes <span className="stayDetailDotSep" /> 4 dormitorios <span className="stayDetailDotSep" /> 5 camas <span className="stayDetailDotSep" /> 4.5 baños</p>
                 </div>
-                <img className="stayDetailHostBadge" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80" alt="Perfil del anfitrion" />
+                <img className="stayDetailHostBadge" src={hostAvatar} alt="Perfil del anfitrión" />
               </div>
             </article>
 
@@ -398,22 +558,35 @@ function StayDetailPage() {
             </article>
 
             <article className="stayDetailSection">
-              <h3 className="stayDetailReviewsHeader">★ {rating} · 128 reseñas</h3>
-              <div className="stayDetailReviewsGrid">
-                {defaultReviews.map((review) => (
-                  <article className="stayDetailReviewCard" key={review.name}>
-                    <div className="stayDetailReviewTop">
-                      <img src={review.avatar} alt={review.name} />
-                      <div>
-                        <strong>{review.name}</strong>
-                        <span>{review.date}</span>
-                      </div>
-                    </div>
-                    <p className="stayDetailReviewText">{review.text}</p>
-                  </article>
-                ))}
-              </div>
-              <button className="stayDetailMoreBtn" type="button">Ver mas reseñas</button>
+              <h3 className="stayDetailReviewsHeader">
+                {rating === "Nuevo" ? "★ Sin reseñas" : `★ ${rating} · ${reviewCount} ${reviewCount === 1 ? "reseña" : "reseñas"}`}
+              </h3>
+              {reviews.length > 0 ? (
+                <div className="stayDetailReviewsGrid">
+                  {reviews.map((r, i) => {
+                    const mapped = mapRealReview(r);
+                    return (
+                      <article className="stayDetailReviewCard" key={r.id_review || i}>
+                        <div className="stayDetailReviewTop">
+                          <img src={mapped.avatar} alt={mapped.name} />
+                          <div>
+                            <strong>{mapped.name}</strong>
+                            <span>{mapped.date}</span>
+                          </div>
+                        </div>
+                        <p className="stayDetailReviewText">{mapped.text}</p>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p style={{ color: "#666", fontSize: "0.95rem", margin: "10px 0" }}>
+                  Este alojamiento aún no tiene reseñas escritas por usuarios reales.
+                </p>
+              )}
+              {reviews.length > 6 && (
+                <button className="stayDetailMoreBtn" type="button">Ver mas reseñas</button>
+              )}
             </article>
 
             <article className="stayDetailSection">
@@ -453,7 +626,7 @@ function StayDetailPage() {
           </div>
 
           <aside className="stayDetailBookingCard">
-            <h3 className="stayDetailBookingPrice">${summaryPrice.toLocaleString()} <span>/ noche</span></h3>
+            <h3 className="stayDetailBookingPrice">{formatCurrencyPrice(summaryPrice, stay.currency)} <span>/ noche</span></h3>
             <div className="stayDetailBookingForm">
               <div className="stayDetailBookingDates">
                 <div className="stayDetailBookingField">
@@ -521,8 +694,14 @@ function StayDetailPage() {
             <p className="stayDetailSubNote">Aun no se te cobrara</p>
 
             <div className="stayDetailPriceBreakdown">
-              <span className="stayDetailPriceRow"><span>${summaryPrice} x {nights} noches</span><span>${(summaryPrice * nights).toLocaleString()}</span></span>
-              <span className="stayDetailPriceRow stayDetailPriceTotal"><span>Total antes de impuestos</span><span>${total.toLocaleString()}</span></span>
+              <span className="stayDetailPriceRow">
+                <span>{formatCurrencyPrice(summaryPrice, stay.currency)} x {nights} {nights === 1 ? "noche" : "noches"}</span>
+                <span>{formatCurrencyPrice(summaryPrice * nights, stay.currency)}</span>
+              </span>
+              <span className="stayDetailPriceRow stayDetailPriceTotal">
+                <span>Total antes de impuestos</span>
+                <span>{formatCurrencyPrice(total, stay.currency)}</span>
+              </span>
             </div>
 
             <p className="stayDetailPriceTip">Este alojamiento es una joya poco comun. Lugares similares suelen reservarse con meses de anticipacion.</p>
