@@ -100,6 +100,7 @@ function StayDetailPage() {
   const [allPhotosOpen, setAllPhotosOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [panoramaOpen, setPanoramaOpen] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
 
   // Reseñas
   const [reviews, setReviews] = useState([]);
@@ -311,9 +312,6 @@ function StayDetailPage() {
               <button className="stayDetailQuickBtn" type="button" onClick={handleShare} id="detailShareBtn">
                 ↗ <span id="detailShareLabel">Compartir</span>
               </button>
-              <button
-                className={`stayDetailQuickBtn ${isFavorite ? "stayDetailFavoriteActive" : ""}`}
-                type="button"
               <button
                 className={`stayDetailQuickBtn ${isFavorite ? "stayDetailFavoriteActive" : ""}`}
                 type="button"
