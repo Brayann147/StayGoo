@@ -353,7 +353,7 @@ function StayDetailPage() {
                   <h2>Villa completa, anfitrión: {hostName}</h2>
                   <p>{maxGuests} huespedes <span className="stayDetailDotSep" /> 4 dormitorios <span className="stayDetailDotSep" /> 5 camas <span className="stayDetailDotSep" /> 4.5 baños</p>
                 </div>
-                <img className="stayDetailHostBadge" src={hostAvatar} alt="Perfil del anfitrión" />
+                <img className="stayDetailHostBadge" src={stay.hostAvatar || localStorage.getItem('staygooProfilePhoto') || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"} alt="Perfil del anfitrion" />
               </div>
             </article>
 

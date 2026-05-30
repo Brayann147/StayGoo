@@ -208,8 +208,9 @@ function HostDashboardPage() {
   const [reservationViewDate, setReservationViewDate] = useState(new Date(2024, 9, 1));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState("2024-10-01");
   const [hostPhoto, setHostPhoto] = useState(
-    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80"
-  );
+  localStorage.getItem('staygooProfilePhoto') || 
+  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80"
+);
   const [selectedMessageGuestName, setSelectedMessageGuestName] = useState(null);
   const [earningsView, setEarningsView] = useState("monthly");
   const [selectedEarningsListing, setSelectedEarningsListing] = useState(null);
@@ -396,7 +397,13 @@ function HostDashboardPage() {
     try {
       setIsProcessing(true);
       const userProfile = await getMyProfile();
+      console.log("perfil completo:", userProfile);
+      console.log("avatar:", userProfile?.avatar);
       const userId = userProfile?.id_user;
+
+      const hostAvatar = userProfile?.avatar || localStorage.getItem('staygooProfilePhoto') || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80";
+    if (userProfile?.avatar) localStorage.setItem('staygooProfilePhoto', userProfile.avatar);
+
       const data = await getHousings();
 
       if (data && Array.isArray(data)) {
@@ -454,8 +461,7 @@ function HostDashboardPage() {
             coverImage: firstImage,
             housing_images: images,
             hostName: "Mi Alojamiento",
-            hostAvatar:
-              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80",
+            hostAvatar: hostAvatar,
             status: item.status === "available" ? "Publicado" : "Borrador",
             rating: 4.8,
             reservations: 0,
@@ -2383,17 +2389,9 @@ function HostDashboardPage() {
       {isProcessing && <DualLoader overlay />}
       <aside className="hostSidebar">
         <div className="hostBrandBlock">
-          <p>Bienvenido, {displayName}</p>
-          <label className="hostBrandPhotoLabel">
-            <img src={hostPhoto} alt="Perfil del anfitrión" className="hostBrandUserIcon" />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleHostPhotoChange}
-              style={{ display: "none" }}
-            />
-          </label>
-        </div>
+  <p>Bienvenido, {displayName}</p>
+  <img src={hostPhoto} alt="Perfil del anfitrión" className="hostBrandUserIcon" />
+</div>
 
         <nav className="hostMainNav">
           {sidebarItems.map((item) => (

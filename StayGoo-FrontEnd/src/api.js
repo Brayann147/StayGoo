@@ -107,7 +107,10 @@ export async function logoutUser() {
  * Obtener perfil del usuario autenticado
  */
 export async function getMyProfile() {
-  return request("/users/me");
+  const data = await request('/users/me');
+  // Sincroniza el avatar al localStorage cada vez que se carga el perfil
+  if (data?.avatar) localStorage.setItem('staygooProfilePhoto', data.avatar);
+  return data;
 }
 
 /**
@@ -147,6 +150,19 @@ export async function uploadUserAvatar(file) {
   }
 
   return data;
+}
+
+export async function uploadProfilePhoto(file) {
+  const formData = new FormData();
+  formData.append('photo', file);
+  const token = localStorage.getItem('staygooToken');
+  const res = await fetch(`${BASE_URL}/users/me/photo`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error('Error al subir la foto');
+  return res.json();
 }
 
 // ── HOUSINGS ───────────────────────────────────────────────────────────────────
