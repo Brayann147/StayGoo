@@ -237,7 +237,8 @@ function StayDetailPage() {
   const gallery = getGallery(stay);
   const panoramaSrc = getPanoramaSrc(stay, gallery[0]);
   const summaryPrice = Number(String(price).replace(/[^0-9.]/g, "")) || 280;
-  const hostName = clean(stay.hostName, "Anfitrión");
+  const hostName = clean(stay.host?.name || stay.hostName, "Anfitrión");
+  const hostAvatar = clean(stay.host?.avatar, "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80");
   const isSuperHost = stay.isSuperHost ?? true;
 
   const defaultCheckIn = useMemo(() => new Date(), []);
@@ -500,10 +501,10 @@ function StayDetailPage() {
             <article>
               <div className="stayDetailHostingRow">
                 <div>
-                  <h2>Villa completa, anfitrion: {hostName}</h2>
+                  <h2>Villa completa, anfitrión: {hostName}</h2>
                   <p>{maxGuests} huespedes <span className="stayDetailDotSep" /> 4 dormitorios <span className="stayDetailDotSep" /> 5 camas <span className="stayDetailDotSep" /> 4.5 baños</p>
                 </div>
-                <img className="stayDetailHostBadge" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80" alt="Perfil del anfitrion" />
+                <img className="stayDetailHostBadge" src={hostAvatar} alt="Perfil del anfitrión" />
               </div>
             </article>
 

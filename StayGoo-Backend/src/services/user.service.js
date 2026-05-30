@@ -23,14 +23,37 @@ export const getUserById = async (id_user) => {
 
 // Actualizar datos del perfil de usuario
 export const updateUser = async (id_user, updates) => {
+    // Intentar actualizar primero
     const { data, error } = await supabase
         .from('user')
         .update(updates)
         .eq('id_user', id_user)
         .select()
         .single();
-    if (error) throw error;
-    return data;
+
+    if (!error) return data;
+
+    // Log the initial update error for debugging before attempting upsert
+    console.error('❌ Initial update error for user', id_user, ':', error);
+
+    // Si la actualización falló (por ejemplo, no existe la fila), intentar upsert
+    try {
+        const payload = { id_user, ...updates };
+        const { data: upsertData, error: upsertError } = await supabase
+            .from('user')
+            .upsert(payload, { onConflict: 'id_user' })
+            .select()
+            .single();
+
+        if (upsertError) {
+            console.error('❌ Error updating user, upsert failed:', upsertError);
+            throw upsertError;
+        }
+        return upsertData;
+    } catch (err) {
+        console.error('❌ Error in updateUser:', err);
+        throw err;
+    }
 };
 
 // Listar todos los roles disponibles
