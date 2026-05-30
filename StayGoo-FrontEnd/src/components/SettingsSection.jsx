@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuthUser } from "../useAuthUser";
-import { updateMyProfile } from "../api";
+import { updateMyProfile, uploadUserAvatar } from "../api";
 
 const settingTabs = [
   { id: "account", icon: UserCog },
@@ -52,7 +52,13 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
       }
     })(),
   });
-  const [localUserPhoto, setLocalUserPhoto] = useState(DEFAULT_PROFILE_PHOTO);
+  const [localUserPhoto, setLocalUserPhoto] = useState(
+    () => localStorage.getItem("staygooUserPhoto") || profilePhoto || DEFAULT_PROFILE_PHOTO
+  );
+  // Archivo File real seleccionado por el usuario (pendiente de subir)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
+  // Ref a la URL temporal de preview (para poder revocarla despues)
+  const previewUrlRef = useRef(null);
   const [currency, setCurrency] = useState(() => {
     try {
       return window.localStorage.getItem("staygooCurrency") || "cop";
@@ -83,7 +89,15 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
       });
   }, [user]);
 
-  const userPhoto = profilePhoto || localUserPhoto;
+  const userPhoto = localUserPhoto || profilePhoto || DEFAULT_PROFILE_PHOTO;
+
+  // Sincronizar si el padre cambia la foto externamente
+  useEffect(() => {
+    if (profilePhoto && profilePhoto !== localUserPhoto && !pendingAvatarFile) {
+      setLocalUserPhoto(profilePhoto);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profilePhoto]);
 
   const currentTabLabel = useMemo(
     () => tabLabels[activeTab] ?? "Configuración",
@@ -101,18 +115,35 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-        // 1. Guardar localmente
+        // 1. Si hay imagen pendiente, subirla primero al bucket 'avatars'
+        let finalAvatarUrl = localUserPhoto;
+        if (pendingAvatarFile) {
+            const result = await uploadUserAvatar(pendingAvatarFile);
+            finalAvatarUrl = result.avatar;
+            setPendingAvatarFile(null);
+            if (previewUrlRef.current) {
+                URL.revokeObjectURL(previewUrlRef.current);
+                previewUrlRef.current = null;
+            }
+        }
+
+        // 2. Guardar localmente
         localStorage.setItem("staygooUserName", formData.fullName);
         localStorage.setItem("staygooUserEmail", formData.email);
         localStorage.setItem("staygooUserPhone", formData.phone);
+        localStorage.setItem("staygooUserPhoto", finalAvatarUrl);
         
-        // 2. Guardar en backend
+        // 3. Guardar nombre/teléfono en backend (el avatar ya fue guardado por uploadUserAvatar)
         await updateMyProfile({ name: formData.fullName, phone: formData.phone });
-        
+
+        setLocalUserPhoto(finalAvatarUrl);
+        onProfilePhotoChange?.(finalAvatarUrl);
         setHasUnsavedChanges(false);
+        onDirtyChange?.(false);
         alert("Cambios guardados con éxito");
     } catch (error) {
         console.error(error);
+        alert(error.message || "No se pudieron guardar los cambios.");
     } finally {
         setIsSaving(false);
     }
@@ -140,14 +171,17 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
                   <div className="settingsPhotoOverlay"><Camera size={24} /></div>
                   <input type="file" accept="image/*" onChange={(e) => {
                       const file = e.target.files[0];
-                      if(file) {
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                              setLocalUserPhoto(ev.target.result);
-                              onProfilePhotoChange?.(ev.target.result);
-                              setHasUnsavedChanges(true);
-                          };
-                          reader.readAsDataURL(file);
+                      if (file) {
+                          // Liberar URL de preview anterior
+                          if (previewUrlRef.current) {
+                              URL.revokeObjectURL(previewUrlRef.current);
+                          }
+                          const previewUrl = URL.createObjectURL(file);
+                          previewUrlRef.current = previewUrl;
+                          setLocalUserPhoto(previewUrl);
+                          setPendingAvatarFile(file);
+                          onProfilePhotoChange?.(previewUrl);
+                          setHasUnsavedChanges(true);
                       }
                   }} style={{ display: "none" }} />
                 </label>
