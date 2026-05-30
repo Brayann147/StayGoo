@@ -2394,7 +2394,8 @@ function HostDashboardPage() {
 </div>
 
         <nav className="hostMainNav">
-          {sidebarItems.map((item) => (
+          {sidebarItems.map((item) => ( 
+            
             <button
               key={item.id}
               className={`hostNavItem ${activeItem === item.id ? "isActive" : ""}`}
