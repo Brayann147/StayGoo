@@ -29,8 +29,23 @@ export const getReviewsByHousing = async (id_housing) => {
                 user(id_user, name)
             )
         `)
-        .eq('booking.id_housing', id_housing);
+        .eq('booking.id_housing', parseInt(id_housing));
     if (error) throw error;
-    return data;
+    return data ?? [];
+};
+
+export const getReviewsByBooking = async (id_booking) => {
+    const { data, error } = await supabase
+        .from('review')
+        .select(`
+            *,
+            booking(
+                id_housing,
+                user(id_user, name)
+            )
+        `)
+        .eq('id_booking', id_booking);
+    if (error) throw error;
+    return data ?? [];
 };
 

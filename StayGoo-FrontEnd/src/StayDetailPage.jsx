@@ -195,9 +195,9 @@ function StayDetailPage() {
       setSubmittingReview(true);
       setReviewError("");
       await createReview({
+        id_booking: userBookingId,
         rating: newReview.rating,
         comment: newReview.comment,
-        id_housing: stay?.id_housing || stay?.realId,
       });
       setReviewSuccess(true);
       setNewReview({ rating: 5, comment: "" });
