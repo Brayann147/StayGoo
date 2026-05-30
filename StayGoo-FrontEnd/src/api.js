@@ -121,6 +121,34 @@ export async function updateMyProfile(updates) {
   });
 }
 
+/**
+ * Subir foto de perfil del usuario autenticado
+ * @param {File} file - Archivo de imagen
+ * @returns {Promise<{avatar: string}>} URL pública del avatar
+ */
+export async function uploadUserAvatar(file) {
+  const formData = new FormData();
+  formData.append("avatar", file);
+
+  const token = localStorage.getItem("staygooToken");
+
+  const response = await fetch(`${API_BASE_URL}/users/me/avatar`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Error al subir la foto de perfil");
+  }
+
+  return data;
+}
+
 // ── HOUSINGS ───────────────────────────────────────────────────────────────────
 
 /**
