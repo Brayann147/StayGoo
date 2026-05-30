@@ -22,7 +22,7 @@ export const upload = multer({
 // Helper para instanciar el cliente con el token del usuario actual
 const getAuthClient = (req) => {
     const token = req.headers['authorization']?.split(' ')[1];
-    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
+    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
         global: {
             headers: token ? { Authorization: `Bearer ${token}` } : {}
         }
@@ -85,9 +85,9 @@ export const uploadHousingImage = async (req, res) => {
             throw dbError;
         }
 
-        return res.status(201).json({ 
-            message: 'Imagen subida y registrada con éxito.', 
-            image: imgData 
+        return res.status(201).json({
+            message: 'Imagen subida y registrada con éxito.',
+            image: imgData
         });
 
     } catch (error) {

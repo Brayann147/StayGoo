@@ -17,14 +17,18 @@ export const createReview = async (reviewData) => {
 };
 
 // Listar reviews de un booking específico
-export const getReviewsByBooking = async (id_booking) => {
+// Listar reviews de un alojamiento específico
+export const getReviewsByHousing = async (id_housing) => {
     const { data, error } = await supabase
         .from('review')
         .select(`
             *,
-            booking ( user (id_user, name) )
+            booking ( 
+                id_housing,
+                user (id_user, name) 
+            )
         `)
-        .eq('id_booking', id_booking);
+        .eq('booking.id_housing', id_housing);
     if (error) throw error;
     return data;
 };

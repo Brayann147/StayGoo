@@ -190,24 +190,7 @@ export async function getHostBookings() {
 
 // ── REVIEWS ────────────────────────────────────────────────────────────────────
 
-/**
- * Obtener reseñas de un alojamiento
- * @param {string|number} housingId
- */
-export async function getReviewsByHousing(housingId) {
-  return request(`/reviews?housing_id=${housingId}`);
-}
 
-/**
- * Crear una reseña
- * @param {Object} reviewData
- */
-export async function createReview(reviewData) {
-  return request("/reviews", {
-    method: "POST",
-    body: JSON.stringify(reviewData),
-  });
-}
 
 // ── NOTIFICATIONS ──────────────────────────────────────────────────────────────
 
@@ -269,6 +252,17 @@ export async function uploadHousingImage(idHousing, file, isPanorama) {
 }
 
 /**
+ * Eliminar una imagen de alojamiento por su ID
+ * @param {string|number} idImage
+ */
+export async function deleteHousingImage(idImage) {
+  return request(`/housings/images/${idImage}`, {
+    method: "DELETE",
+  });
+}
+
+
+/**
  * Obtener departamentos directo del dataset de GeoNames (featureCode=ADM1)
  */
 export async function fetchDepartmentsByCountry(countryCode) {
@@ -277,11 +271,11 @@ export async function fetchDepartmentsByCountry(countryCode) {
       `https://secure.geonames.org/searchJSON?country=${countryCode}&featureCode=ADM1&maxRows=100&username=rafaelc26`
     );
     const data = await response.json();
-    
+
     if (!data || !data.geonames) {
       return [];
     }
-    
+
     return data.geonames.map(dep => ({
       name: dep.name,
       adminCode1: dep.adminCode1
@@ -301,11 +295,11 @@ export async function fetchCitiesByDepartment(countryCode, adminCode1) {
       `https://secure.geonames.org/searchJSON?country=${countryCode}&adminCode1=${adminCode1}&featureClass=P&maxRows=100&username=rafaelc26`
     );
     const data = await response.json();
-    
+
     if (!data || !data.geonames) {
       return [];
     }
-    
+
     return data.geonames.map(city => ({
       name: city.name,
       lat: city.lat,
@@ -315,5 +309,15 @@ export async function fetchCitiesByDepartment(countryCode, adminCode1) {
     console.error("Error directo a GeoNames (Ciudades):", error);
     return [];
   }
+}
+export async function getReviewsByHousing(housingId) {
+  return request(`/reviews/housing/${housingId}`, { public: true });
+}
+
+export async function createReview(reviewData) {
+  return request("/reviews", {
+    method: "POST",
+    body: JSON.stringify(reviewData),
+  });
 }
 

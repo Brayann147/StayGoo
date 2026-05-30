@@ -24,4 +24,14 @@ export const getReviewsByBooking = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+}
+export const getReviewsByHousing = async (req, res) => {
+    try {
+        const { id_housing } = req.params;
+        const data = await reviewService.getReviewsByHousing(id_housing);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
+
