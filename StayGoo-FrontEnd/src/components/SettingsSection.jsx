@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from 'sweetalert2';
+import { updateMyProfile, getMyProfile, uploadUserAvatar } from "../api";
+import DualLoader from "./DualLoader";
+
+
 import {
   Bell,
   CreditCard,
@@ -12,7 +17,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuthUser } from "../useAuthUser";
-import { updateMyProfile, uploadUserAvatar } from "../api";
 
 const settingTabs = [
   { id: "account", icon: UserCog },
@@ -28,6 +32,20 @@ const tabLabels = {
   notifications: "Notificaciones",
   appearance: "Apariencia",
   payments: "Pagos"
+};
+
+const handlePhotoChange = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    const result = await uploadProfilePhoto(file);
+    const url = result.profile_photo;
+    localStorage.setItem('staygooProfilePhoto', url);
+    setLocalUserPhoto(url);
+    if (onProfilePhotoChange) onProfilePhotoChange(url);
+  } catch (err) {
+    Swal.fire({ title: 'Error', text: 'No se pudo subir la foto.', icon: 'error' });
+  }
 };
 
 const DEFAULT_PROFILE_PHOTO =
@@ -52,12 +70,10 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
       }
     })(),
   });
-  const [localUserPhoto, setLocalUserPhoto] = useState(
-    () => localStorage.getItem("staygooUserPhoto") || profilePhoto || DEFAULT_PROFILE_PHOTO
-  );
-  // Archivo File real seleccionado por el usuario (pendiente de subir)
+  const [localUserPhoto, setLocalUserPhoto] = useState(profilePhoto || DEFAULT_PROFILE_PHOTO);
+  // El archivo File real seleccionado por el usuario (pendiente de subir)
   const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
-  // Ref a la URL temporal de preview (para poder revocarla despues)
+  // URL de objeto local para preview instantáneo sin base64
   const previewUrlRef = useRef(null);
   const [currency, setCurrency] = useState(() => {
     try {
@@ -81,22 +97,29 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
       const savedName = localStorage.getItem("staygooUserName") || "";
       const savedEmail = localStorage.getItem("staygooUserEmail") || "";
       const savedPhone = localStorage.getItem("staygooUserPhone") || "";
+      const savedPhoto = localStorage.getItem('staygooProfilePhoto');
+      
+      if (savedPhoto) setLocalUserPhoto(savedPhoto);
       
       setFormData({
           fullName: savedName,
           email: savedEmail,
           phone: savedPhone
       });
+
+      getMyProfile().then(profile => {
+        if (profile?.avatar) {
+          setLocalUserPhoto(profile.avatar);
+          localStorage.setItem("staygooProfilePhoto", profile.avatar);
+          if (onProfilePhotoChange) onProfilePhotoChange(profile.avatar);
+        }
+      }).catch(() => {});
   }, [user]);
 
   const userPhoto = localUserPhoto || profilePhoto || DEFAULT_PROFILE_PHOTO;
 
-  // Sincronizar si el padre cambia la foto externamente
   useEffect(() => {
-    if (profilePhoto && profilePhoto !== localUserPhoto && !pendingAvatarFile) {
-      setLocalUserPhoto(profilePhoto);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setLocalUserPhoto(profilePhoto || DEFAULT_PROFILE_PHOTO);
   }, [profilePhoto]);
 
   const currentTabLabel = useMemo(
@@ -115,12 +138,13 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-        // 1. Si hay imagen pendiente, subirla primero al bucket 'avatars'
+        // 1. Si hay una imagen pendiente, subirla primero
         let finalAvatarUrl = localUserPhoto;
         if (pendingAvatarFile) {
             const result = await uploadUserAvatar(pendingAvatarFile);
             finalAvatarUrl = result.avatar;
             setPendingAvatarFile(null);
+            // Liberar la URL temporal del objeto
             if (previewUrlRef.current) {
                 URL.revokeObjectURL(previewUrlRef.current);
                 previewUrlRef.current = null;
@@ -133,17 +157,20 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
         localStorage.setItem("staygooUserPhone", formData.phone);
         localStorage.setItem("staygooUserPhoto", finalAvatarUrl);
         
-        // 3. Guardar nombre/teléfono en backend (el avatar ya fue guardado por uploadUserAvatar)
-        await updateMyProfile({ name: formData.fullName, phone: formData.phone });
+        // 3. Guardar en backend (nombre, teléfono — el avatar ya fue guardado por el endpoint)
+        await updateMyProfile({
+          name: formData.fullName,
+          phone: formData.phone,
+        });
 
         setLocalUserPhoto(finalAvatarUrl);
         onProfilePhotoChange?.(finalAvatarUrl);
         setHasUnsavedChanges(false);
         onDirtyChange?.(false);
-        alert("Cambios guardados con éxito");
+        Swal.fire({title: 'Éxito', text: 'Cambios guardados con éxito', icon: 'success'});
     } catch (error) {
         console.error(error);
-        alert(error.message || "No se pudieron guardar los cambios.");
+        Swal.fire({title: 'Error', text: error.message || 'No se pudieron guardar los cambios.', icon: 'error'});
     } finally {
         setIsSaving(false);
     }
@@ -172,10 +199,11 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
                   <input type="file" accept="image/*" onChange={(e) => {
                       const file = e.target.files[0];
                       if (file) {
-                          // Liberar URL de preview anterior
+                          // Liberar URL de previsualización anterior si existe
                           if (previewUrlRef.current) {
                               URL.revokeObjectURL(previewUrlRef.current);
                           }
+                          // Crear URL temporal para previsualización (sin base64)
                           const previewUrl = URL.createObjectURL(file);
                           previewUrlRef.current = previewUrl;
                           setLocalUserPhoto(previewUrl);
@@ -238,6 +266,7 @@ export function SettingsSection({ profilePhoto, onProfilePhotoChange, onDirtyCha
 
   return (
     <section className="settingsPage">
+      {isSaving && <DualLoader overlay />}
       <aside className="settingsNavPanel">
         <div className="settingsSidebarTop">
           <div>

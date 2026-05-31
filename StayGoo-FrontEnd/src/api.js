@@ -2,6 +2,7 @@
  * api.js — Capa de comunicación con el Backend de StayGo
  * Todos los servicios que hablan con el servidor van aquí.
  */
+import Swal from 'sweetalert2';
 
 const DEFAULT_API_BASE_URL = import.meta.env.PROD
   ? "https://staygoo.onrender.com/api"
@@ -54,8 +55,13 @@ async function request(endpoint, options = {}) {
     if (response.status === 401 && data.error === 'Token inválido o expirado.') {
       localStorage.removeItem("staygooToken");
       localStorage.removeItem("staygooSession");
-      alert("Tu sesión ha caducado por seguridad. Por favor, inicia sesión nuevamente para continuar.");
-      window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
+      Swal.fire({
+        title: 'Error',
+        text: 'Tu sesión ha caducado por seguridad. Por favor, inicia sesión nuevamente para continuar.',
+        icon: 'error'
+      }).then(() => {
+        window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
+      });
     }
     throw new Error(data.error || data.message || "Error en el servidor");
   }
@@ -101,7 +107,10 @@ export async function logoutUser() {
  * Obtener perfil del usuario autenticado
  */
 export async function getMyProfile() {
-  return request("/users/me");
+  const data = await request('/users/me');
+  // Sincroniza el avatar al localStorage cada vez que se carga el perfil
+  if (data?.avatar) localStorage.setItem('staygooProfilePhoto', data.avatar);
+  return data;
 }
 
 /**
@@ -143,7 +152,20 @@ export async function uploadUserAvatar(file) {
   return data;
 }
 
+export async function uploadProfilePhoto(file) {
+  const formData = new FormData();
+  formData.append('photo', file);
+  const token = localStorage.getItem('staygooToken');
+  const res = await fetch(`${BASE_URL}/users/me/photo`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error('Error al subir la foto');
+  return res.json();
+}
 
+// ── HOUSINGS ───────────────────────────────────────────────────────────────────
 
 /**
  * Obtener todos los alojamientos
@@ -212,24 +234,7 @@ export async function getHostBookings() {
 
 // ── REVIEWS ────────────────────────────────────────────────────────────────────
 
-/**
- * Obtener reseñas de un alojamiento
- * @param {string|number} housingId
- */
-export async function getReviewsByHousing(housingId) {
-  return request(`/reviews?housing_id=${housingId}`);
-}
 
-/**
- * Crear una reseña
- * @param {Object} reviewData
- */
-export async function createReview(reviewData) {
-  return request("/reviews", {
-    method: "POST",
-    body: JSON.stringify(reviewData),
-  });
-}
 
 // ── NOTIFICATIONS ──────────────────────────────────────────────────────────────
 
@@ -245,8 +250,8 @@ export async function getNotifications() {
 /**
  * Obtener mensajes del usuario autenticado
  */
-export async function getMessages() {
-  return request("/messages");
+export async function getMessages(id_user) {
+  return request(`/messages/conversation/${id_user}`);
 }
 
 /**
@@ -290,167 +295,73 @@ export async function uploadHousingImage(idHousing, file, isPanorama) {
   return data;
 }
 
-// ── GEOGRAPHICAL SERVICES ────────────────────────────────────────────────────────
+/**
+ * Eliminar una imagen de alojamiento por su ID
+ * @param {string|number} idImage
+ */
+export async function deleteHousingImage(idImage) {
+  return request(`/housings/images/${idImage}`, {
+    method: "DELETE",
+  });
+}
 
-const countryCodeToName = {
-  "AR": "Argentina",
-  "BO": "Bolivia",
-  "BR": "Brazil",
-  "CA": "Canada",
-  "CL": "Chile",
-  "CO": "Colombia",
-  "CR": "Costa Rica",
-  "CU": "Cuba",
-  "EC": "Ecuador",
-  "SV": "El Salvador",
-  "ES": "Spain",
-  "US": "United States",
-  "GT": "Guatemala",
-  "HN": "Honduras",
-  "MX": "Mexico",
-  "NI": "Nicaragua",
-  "PA": "Panama",
-  "PY": "Paraguay",
-  "PE": "Peru",
-  "PR": "Puerto Rico",
-  "DO": "Dominican Republic",
-  "UY": "Uruguay",
-  "VE": "Venezuela"
-};
-
-// Fallback data in case the external API is unreachable or rate limited
-const FALLBACK_DEPARTMENTS = {
-  "CO": [
-    { name: "Antioquia", adminCode1: "Antioquia" },
-    { name: "Bogotá D.C.", adminCode1: "Bogota" },
-    { name: "Valle del Cauca", adminCode1: "Valle del Cauca" },
-    { name: "Atlántico", adminCode1: "Atlantico" },
-    { name: "Bolívar", adminCode1: "Bolivar" },
-    { name: "Cundinamarca", adminCode1: "Cundinamarca" },
-    { name: "Santander", adminCode1: "Santander" }
-  ],
-  "AR": [
-    { name: "Buenos Aires", adminCode1: "Buenos Aires" },
-    { name: "Córdoba", adminCode1: "Cordoba" },
-    { name: "Santa Fe", adminCode1: "Santa Fe" },
-    { name: "Mendoza", adminCode1: "Mendoza" }
-  ],
-  "MX": [
-    { name: "Ciudad de México", adminCode1: "Ciudad de Mexico" },
-    { name: "Jalisco", adminCode1: "Jalisco" },
-    { name: "Nuevo León", adminCode1: "Nuevo Leon" },
-    { name: "Quintana Roo", adminCode1: "Quintana Roo" }
-  ],
-  "US": [
-    { name: "California", adminCode1: "California" },
-    { name: "Florida", adminCode1: "Florida" },
-    { name: "New York", adminCode1: "New York" },
-    { name: "Texas", adminCode1: "Texas" }
-  ],
-  "ES": [
-    { name: "Madrid", adminCode1: "Madrid" },
-    { name: "Cataluña", adminCode1: "Catalonia" },
-    { name: "Andalucía", adminCode1: "Andalusia" },
-    { name: "Comunidad Valenciana", adminCode1: "Valencia" }
-  ]
-};
-
-const FALLBACK_CITIES = {
-  "CO_Antioquia": ["Medellín", "Envigado", "Sabaneta", "Itagüí", "Rionegro", "Bello"],
-  "CO_Bogota": ["Bogotá"],
-  "CO_Valle del Cauca": ["Cali", "Palmira", "Buga", "Tuluá"],
-  "CO_Atlantico": ["Barranquilla", "Soledad", "Puerto Colombia"],
-  "CO_Bolivar": ["Cartagena", "Magangué", "Turbaco"],
-  "CO_Cundinamarca": ["Soacha", "Chía", "Zipaquirá", "Facatativá"],
-  "CO_Santander": ["Bucaramanga", "Floridablanca", "Girón", "Barrancabermeja"],
-  
-  "AR_Buenos Aires": ["Buenos Aires", "La Plata", "Mar del Plata", "Bahía Blanca"],
-  "AR_Cordoba": ["Córdoba", "Villa Carlos Paz", "Río Cuarto"],
-  
-  "MX_Ciudad de Mexico": ["Ciudad de México"],
-  "MX_Jalisco": ["Guadalajara", "Zapopan", "Puerto Vallarta"],
-  
-  "US_California": ["Los Angeles", "San Francisco", "San Diego", "San Jose"],
-  "US_Florida": ["Miami", "Orlando", "Tampa", "Fort Lauderdale"],
-  "US_New York": ["New York City", "Buffalo", "Rochester", "Albany"],
-  
-  "ES_Madrid": ["Madrid", "Alcalá de Henares", "Móstoles"],
-  "ES_Catalonia": ["Barcelona", "Girona", "Tarragona", "Lleida"]
-};
 
 /**
- * Obtener los departamentos/estados de un país.
- * @param {string} countryCode - Código ISO de 2 letras del país (ej. "CO")
+ * Obtener departamentos directo del dataset de GeoNames (featureCode=ADM1)
  */
 export async function fetchDepartmentsByCountry(countryCode) {
-  const countryName = countryCodeToName[countryCode];
-  if (!countryName) {
-    return FALLBACK_DEPARTMENTS[countryCode] || [];
-  }
   try {
-    const response = await fetch("https://countriesnow.space/api/v0.1/countries/states", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ country: countryName })
-    });
-    if (!response.ok) throw new Error("API response error");
-    const result = await response.json();
-    if (result.error || !result.data || !result.data.states) {
-      throw new Error(result.msg || "Error from API");
+    const response = await fetch(
+      `https://secure.geonames.org/searchJSON?country=${countryCode}&featureCode=ADM1&maxRows=100&username=rafaelc26`
+    );
+    const data = await response.json();
+
+    if (!data || !data.geonames) {
+      return [];
     }
-    return result.data.states.map(state => {
-      const displayName = state.name
-        .replace(/\bDepartment\b/gi, "")
-        .replace(/\bProvince\b/gi, "")
-        .replace(/\bState\b/gi, "")
-        .trim();
-      return {
-        name: displayName || state.name,
-        adminCode1: state.name
-      };
-    });
+
+    return data.geonames.map(dep => ({
+      name: dep.name,
+      adminCode1: dep.adminCode1
+    })).sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.warn(`Error fetching departments for ${countryCode}, using local fallback.`, error);
-    return FALLBACK_DEPARTMENTS[countryCode] || [];
+    console.error("Error directo a GeoNames (Departamentos):", error);
+    return [];
   }
 }
 
 /**
- * Obtener las ciudades de un departamento/estado.
- * @param {string} countryCode - Código ISO de 2 letras del país (ej. "CO")
- * @param {string} adminCode1 - Nombre o código del departamento (ej. "Antioquia")
+ * Obtener ciudades directo del dataset de GeoNames por departamento
  */
 export async function fetchCitiesByDepartment(countryCode, adminCode1) {
-  const countryName = countryCodeToName[countryCode];
-  if (!countryName) {
-    const fallbackKey = `${countryCode}_${adminCode1}`;
-    return (FALLBACK_CITIES[fallbackKey] || []).map(city => ({ name: city }));
-  }
   try {
-    const response = await fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ country: countryName, state: adminCode1 })
-    });
-    if (!response.ok) throw new Error("API response error");
-    const result = await response.json();
-    if (result.error || !result.data) {
-      throw new Error(result.msg || "Error from API");
+    const response = await fetch(
+      `https://secure.geonames.org/searchJSON?country=${countryCode}&adminCode1=${adminCode1}&featureClass=P&maxRows=100&username=rafaelc26`
+    );
+    const data = await response.json();
+
+    if (!data || !data.geonames) {
+      return [];
     }
-    return result.data.map(cityName => ({ name: cityName }));
+
+    return data.geonames.map(city => ({
+      name: city.name,
+      lat: city.lat,
+      lng: city.lng
+    })).sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.warn(`Error fetching cities for ${countryCode} - ${adminCode1}, using local fallback.`, error);
-    const fallbackKey = `${countryCode}_${adminCode1}`;
-    const fallbackCities = FALLBACK_CITIES[fallbackKey] || [];
-    if (fallbackCities.length > 0) {
-      return fallbackCities.map(city => ({ name: city }));
-    }
-    return [{ name: adminCode1.replace(/\bDepartment\b/gi, "").trim() }];
+    console.error("Error directo a GeoNames (Ciudades):", error);
+    return [];
   }
 }
+export async function getReviewsByHousing(housingId) {
+  return request(`/reviews/housing/${housingId}`, { public: true });
+}
 
+export async function createReview(reviewData) {
+  return request("/reviews", {
+    method: "POST",
+    body: JSON.stringify(reviewData),
+  });
+}
 

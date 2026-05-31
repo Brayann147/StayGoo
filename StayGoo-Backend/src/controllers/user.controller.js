@@ -15,6 +15,37 @@ export const uploadAvatarMiddleware = multer({
     }
 });
 
+export const uploadProfilePhoto = async (req, res) => {
+    try {
+        const id_user = req.user.id;
+        const file = req.file;
+        if (!file) return res.status(400).json({ error: 'No se envió ninguna imagen.' });
+
+        const ext = file.originalname.split('.').pop();
+        const filePath = `avatars/${id_user}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('profile-photos')
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype,
+                upsert: true
+            });
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('profile-photos')
+            .getPublicUrl(filePath);
+
+        const updated = await userService.updateUser(id_user, { avatar: publicUrl });
+        res.status(200).json({ profile_photo: publicUrl, user: updated });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+
+
 /**
  * User Controller – Maneja peticiones HTTP para gestión de usuarios
  */
@@ -123,4 +154,3 @@ export const getRoles = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-

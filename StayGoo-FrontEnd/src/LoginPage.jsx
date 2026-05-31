@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Mail, Lock, Check } from "lucide-react";
 import footerImage from "./assets/footer.jpg";
-import { loginUser } from "./api";
+import { loginUser, getMyProfile } from "./api";
 import "./LoginPage.css";
 
 function LoginPage() {
@@ -33,15 +33,25 @@ function LoginPage() {
           localStorage.setItem("staygooUserName", email.split('@')[0]);
       }
       
-      if (sessionData.user && sessionData.user.email) {
+        if (sessionData.user && sessionData.user.email) {
           localStorage.setItem("staygooUserEmail", sessionData.user.email);
-      }
+        }
 
       const userRoleId = sessionData.user?.user_metadata?.user_type;
       const detectedRole = (userRoleId === 2) ? "host" : "traveler";
 
       localStorage.setItem("staygooSession", "true");
       localStorage.setItem("staygooAccessRole", detectedRole);
+
+      // Intentar obtener perfil completo y guardar avatar si existe
+      try {
+        const profile = await getMyProfile();
+        if (profile?.avatar) {
+          localStorage.setItem("staygooUserPhoto", profile.avatar);
+        }
+      } catch (e) {
+        // Silenciar errores aquí; el flujo principal de login ya fue exitoso
+      }
 
       const params = new URLSearchParams(location.search);
       const redirectTarget = params.get("redirect");

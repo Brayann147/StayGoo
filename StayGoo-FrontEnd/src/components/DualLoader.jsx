@@ -1,23 +1,20 @@
-import React from "react";
-import HouseLoader from "./HouseLoader";
-import "./DualLoader.css";
+import React from 'react';
+import './DualLoader.css';
 
-function DualLoader({ overlay = false, label = "Procesando..." }) {
-  if (overlay) {
-    return (
-      <div className="dualLoaderOverlayContainer" role="dialog" aria-modal="true" aria-label={label}>
-        <div className="dualLoaderGlassCard">
-          <HouseLoader size={130} label={label} />
-        </div>
+export default function DualLoader({ overlay = false }) {
+  const content = (
+    <div className="dual-loader-container">
+      <div className="spinner">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i}></div>
+        ))}
       </div>
-    );
-  }
 
-  return (
-    <div className="dualLoaderInlineContainer">
-      <HouseLoader size={100} label={label} />
     </div>
   );
-}
 
-export default DualLoader;
+  if (overlay) {
+    return <div className="dual-loader-overlay">{content}</div>;
+  }
+  return content;
+}

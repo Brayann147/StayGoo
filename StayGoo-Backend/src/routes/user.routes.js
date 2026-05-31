@@ -2,8 +2,13 @@ import { Router } from 'express';
 import { getUserById, updateUser, getRoles, getMyProfile, uploadAvatar, uploadAvatarMiddleware } from '../controllers/user.controller.js';
 import { register } from '../controllers/auth.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
+import multer from 'multer';
+import { uploadProfilePhoto } from '../controllers/user.controller.js';
 
 const router = Router();
+
+const upload = multer({ storage: multer.memoryStorage() });
+router.post('/me/photo', authenticate, upload.single('photo'), uploadProfilePhoto);
 
 // POST /api/users  → Registrar nuevo usuario (público)
 router.post('/', register);
