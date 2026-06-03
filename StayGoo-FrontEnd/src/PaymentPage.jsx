@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import StripeCheckout from './components/StripeCheckout';
-import { API_BASE_URL } from './api';
+import { API_BASE_URL, createBooking } from './api';
 
 export default function PaymentPage() {
   const [searchParams] = useSearchParams();
@@ -59,8 +59,33 @@ export default function PaymentPage() {
     }
   }, [searchParams]);
 
-  const handleSuccess = () => {
-    navigate('/member-dashboard', { state: { initialSection: 'profile' } });
+  const handleSuccess = async () => {
+    try {
+      // Extraer el id_housing limpio del objeto de alojamiento
+      const stayObj = paymentData?.data || {};
+      const rawId = stayObj.id_housing || stayObj.realId || stayObj.id || '';
+      const id_housing = typeof rawId === 'string'
+        ? parseInt(rawId.replace('lst-', ''), 10)
+        : parseInt(rawId, 10);
+
+      if (!id_housing || isNaN(id_housing)) {
+        console.error('id_housing no válido:', rawId);
+      } else {
+        await createBooking({
+          id_housing,
+          start_date: paymentData.checkIn,
+          end_date: paymentData.checkOut,
+          total_price: paymentData.total,
+          guests: paymentData.guests,
+          status: 'confirmed',
+        });
+      }
+    } catch (err) {
+      // No bloqueamos la navegación si la reserva falla — el usuario ya pagó
+      console.error('Error al registrar la reserva:', err);
+    } finally {
+      navigate('/member-dashboard', { state: { initialSection: 'profile' } });
+    }
   };
 
   if (loading) {
