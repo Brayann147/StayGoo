@@ -5,7 +5,7 @@
 import Swal from 'sweetalert2';
 
 const DEFAULT_API_BASE_URL = import.meta.env.PROD
-  ? "https://staygoo.onrender.com/api"
+  ? "https://staygoo-59il.onrender.com/api"
   : "http://localhost:3000/api";
 
 function normalizeApiBaseUrl(rawUrl) {
@@ -230,39 +230,9 @@ export async function createBooking(bookingData) {
 
 /**
  * Obtener reservas del usuario autenticado (viajes)
- * Llama directamente a Supabase REST para evitar dependencia del backend de Render.
  */
 export async function getMyBookings() {
-  const token = localStorage.getItem("staygooToken");
-  if (!token) return [];
-
-  // Decodificar el user ID del JWT (claim "sub")
-  let userId = null;
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    userId = payload.sub;
-  } catch {
-    return [];
-  }
-
-  const SUPABASE_URL = "https://qgsqhczniickikrdlrmb.supabase.co";
-  const SUPABASE_ANON = "sb_publishable_7-DL_6Ymj8LtY4ojyV6yCw_bGezGeNq";
-
-  const url = `${SUPABASE_URL}/rest/v1/booking?select=${encodeURIComponent(
-    `*,housing(id_housing,name,municipality,department,country,address,price_per_night,housing_images(image_url,is_panorama))`
-  )}&id_user=eq.${userId}&order=start_date.asc`;
-
-  const res = await fetch(url, {
-    headers: {
-      "apikey": SUPABASE_ANON,
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    }
-  });
-
-  if (!res.ok) return [];
-  return await res.json();
+  return request("/bookings/me");
 }
 
 /**
@@ -396,42 +366,9 @@ export async function fetchCitiesByDepartment(countryCode, adminCode1) {
 }
 /**
  * Obtener reseñas de un alojamiento.
- * Llama directamente a Supabase REST para evitar el backend de Render.
  */
 export async function getReviewsByHousing(housingId) {
-  const SUPABASE_URL = "https://qgsqhczniickikrdlrmb.supabase.co";
-  const SUPABASE_ANON = "sb_publishable_7-DL_6Ymj8LtY4ojyV6yCw_bGezGeNq";
-
-  // Paso 1: obtener ids de bookings para ese housing
-  const bookingsRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/booking?select=id_booking&id_housing=eq.${housingId}`,
-    {
-      headers: {
-        "apikey": SUPABASE_ANON,
-        "Authorization": `Bearer ${SUPABASE_ANON}`,
-        "Accept": "application/json"
-      }
-    }
-  );
-  if (!bookingsRes.ok) return [];
-  const bookings = await bookingsRes.json();
-  if (!bookings.length) return [];
-
-  const bookingIds = bookings.map(b => b.id_booking).join(",");
-
-  // Paso 2: obtener reviews de esos bookings con datos del usuario
-  const reviewsRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/review?select=*,booking:id_booking(id_booking,id_housing,id_user,start_date,end_date,user:id_user(name,email))&id_booking=in.(${bookingIds})&order=date.desc`,
-    {
-      headers: {
-        "apikey": SUPABASE_ANON,
-        "Authorization": `Bearer ${SUPABASE_ANON}`,
-        "Accept": "application/json"
-      }
-    }
-  );
-  if (!reviewsRes.ok) return [];
-  return await reviewsRes.json();
+  return request(`/reviews/housing/${housingId}`, { public: true });
 }
 
 export async function createReview(reviewData) {

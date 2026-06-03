@@ -25,7 +25,7 @@ export default function PaymentPage() {
 
       const createIntent = async () => {
         try {
-          const res = await fetch(`/api/create-intent`, {
+          const res = await fetch(`${API_BASE_URL}/payments/create-intent`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
