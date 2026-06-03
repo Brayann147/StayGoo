@@ -42,6 +42,7 @@ import { SettingsSection } from "./components/SettingsSection";
 import logoImage from "./assets/logoo.png";
 import { createHousing, getHousings, updateHousing, getHostBookings, getMyProfile, uploadHousingImage, deleteHousingImage, fetchDepartmentsByCountry, fetchCitiesByDepartment } from "./api";
 import { useAuthUser } from "./useAuthUser";
+import { GoogleMapPicker } from "./components/GoogleMapPicker";
 import "./HostDashboardPage.css";
 
 const sidebarItems = [
@@ -100,6 +101,8 @@ function HostDashboardPage() {
     basePrice: "850",
     weeklyDiscount: "15",
     cleaningFee: "120",
+    latitude: "",
+    longitude: "",
     amenities: {
       wifi: true,
       pool: false,
@@ -121,6 +124,8 @@ function HostDashboardPage() {
     basePrice: "",
     weeklyDiscount: "",
     cleaningFee: "",
+    latitude: "",
+    longitude: "",
     amenities: {
       wifi: false,
       pool: false,
@@ -450,6 +455,8 @@ function HostDashboardPage() {
             basePrice: item.price_per_night?.toString() || "0",
             weeklyDiscount: "0",
             cleaningFee: "0",
+            latitude: item.latitude,
+            longitude: item.longitude,
             amenities: {
               wifi: true,
               pool: false,
@@ -727,6 +734,8 @@ function HostDashboardPage() {
       basePrice: listing.basePrice,
       weeklyDiscount: listing.weeklyDiscount,
       cleaningFee: listing.cleaningFee,
+      latitude: listing.latitude || "",
+      longitude: listing.longitude || "",
       amenities: {
         wifi: Boolean(listing.amenities?.wifi),
         pool: Boolean(listing.amenities?.pool),
@@ -915,7 +924,9 @@ function HostDashboardPage() {
         price_per_night: parseInt(newListingForm.basePrice) || 0,
         capacity: 4,
         id_type: typeId,
-        status: isDraft ? 'maintenance' : 'available'
+        status: isDraft ? 'maintenance' : 'available',
+        latitude: newListingForm.latitude ? parseFloat(newListingForm.latitude) : null,
+        longitude: newListingForm.longitude ? parseFloat(newListingForm.longitude) : null
       };
 
       const newHousing = await createHousing(payload);
@@ -1791,6 +1802,20 @@ function HostDashboardPage() {
               placeholder="Configuración de visibilidad"
             />
           </label>
+          <div style={{ gridColumn: '1 / -1', height: '300px', borderRadius: '8px', overflow: 'hidden', marginTop: '8px' }}>
+            <GoogleMapPicker
+              apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+              position={
+                editListingForm.latitude && editListingForm.longitude
+                  ? { lat: parseFloat(editListingForm.latitude), lng: parseFloat(editListingForm.longitude) }
+                  : null
+              }
+              onChange={(coords) => {
+                updateEditField("latitude", coords.lat);
+                updateEditField("longitude", coords.lng);
+              }}
+            />
+          </div>
         </div>
       </section>
 
@@ -1989,7 +2014,9 @@ function HostDashboardPage() {
                 department: editListingForm.department || "",
                 municipality: editListingForm.cityRegion || "",
                 price_per_night: Number(editListingForm.basePrice),
-                status: "available"
+                status: "available",
+                latitude: editListingForm.latitude ? parseFloat(editListingForm.latitude) : null,
+                longitude: editListingForm.longitude ? parseFloat(editListingForm.longitude) : null
               });
 
               // Eliminar fotos que el usuario borró en la UI
@@ -2166,6 +2193,20 @@ function HostDashboardPage() {
               placeholder="Configuración de visibilidad"
             />
           </label>
+          <div style={{ gridColumn: '1 / -1', height: '300px', borderRadius: '8px', overflow: 'hidden', marginTop: '8px' }}>
+            <GoogleMapPicker
+              apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+              position={
+                newListingForm.latitude && newListingForm.longitude
+                  ? { lat: parseFloat(newListingForm.latitude), lng: parseFloat(newListingForm.longitude) }
+                  : null
+              }
+              onChange={(coords) => {
+                updateNewField("latitude", coords.lat);
+                updateNewField("longitude", coords.lng);
+              }}
+            />
+          </div>
         </div>
       </section>
 

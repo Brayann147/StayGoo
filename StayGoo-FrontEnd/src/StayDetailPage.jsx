@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import "./StayDetailPage.css";
 import PanoramaViewer from "./PanoramaViewer";
+import { GoogleMapPicker } from "./components/GoogleMapPicker";
 import { getHousingById, getReviewsByHousing, createReview } from "./api";
 import {
   isFavorite as isListingFavorite,
@@ -475,6 +476,22 @@ function StayDetailPage() {
             {/* ── Donde estarás / Panoramas ── */}
             <article className="stayDetailSection">
               <h3 className="stayDetailSectionTitle">Donde estarás</h3>
+
+              {/* Google Map Viewer */}
+              {stay.latitude && stay.longitude ? (
+                <div style={{ height: "350px", borderRadius: "12px", overflow: "hidden", marginBottom: "20px" }}>
+                  <GoogleMapPicker
+                    apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+                    position={{ lat: parseFloat(stay.latitude), lng: parseFloat(stay.longitude) }}
+                    readOnly={true}
+                  />
+                </div>
+              ) : (
+                <div className="panorama-error" style={{ marginBottom: "20px" }}>
+                  Ubicación exacta no establecida en el mapa.
+                </div>
+              )}
+
               <div className="stayDetailLocationMap">
                 {panoramaList.length > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

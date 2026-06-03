@@ -1,0 +1,240 @@
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("❌ SUPABASE_URL or SUPABASE_ANON_KEY are missing in env.");
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const CITIES = [
+  {
+    name: "Medellín",
+    department: "Antioquia",
+    latCenter: 6.2442,
+    lngCenter: -75.5748,
+    neighborhoods: ["El Poblado", "Laureles", "Envigado", "Conquistadores", "Belén"]
+  },
+  {
+    name: "Bogotá",
+    department: "Cundinamarca",
+    latCenter: 4.7110,
+    lngCenter: -74.0721,
+    neighborhoods: ["Chapinero", "Usaquén", "Chicó Reservado", "Teusaquillo", "Salitre"]
+  },
+  {
+    name: "Cartagena",
+    department: "Bolívar",
+    latCenter: 10.3910,
+    lngCenter: -75.4794,
+    neighborhoods: ["Ciudad Amurallada", "Bocagrande", "Getsemaní", "Castillogrande", "Marbella"]
+  },
+  {
+    name: "Santa Marta",
+    department: "Magdalena",
+    latCenter: 11.2408,
+    lngCenter: -74.1990,
+    neighborhoods: ["El Rodadero", "Bello Horizonte", "Centro Histórico", "Pozos Colorados", "Taganga"]
+  },
+  {
+    name: "Cali",
+    department: "Valle del Cauca",
+    latCenter: 3.4516,
+    lngCenter: -76.5320,
+    neighborhoods: ["San Antonio", "Granada", "Ciudad Jardín", "El Peñón", "Centenario"]
+  }
+];
+
+const ADJECTIVES = ["Exclusivo", "Hermoso", "Moderno", "Espectacular", "Lujoso", "Acogedor", "Elegante", "Rústico", "Vanguardista", "Tranquilo"];
+const TYPES = [
+  { id: 1, name: "Apartamento", key: "Apartamento" },
+  { id: 2, name: "Casa", key: "Casa" },
+  { id: 3, name: "Cabaña", key: "Cabaña" },
+  { id: 4, name: "Habitación", key: "Habitación" }
+];
+
+const DETAILS = [
+  "con vista panorámica increíble, completamente equipado, zona segura y excelente conectividad.",
+  "perfecto para estadías largas o vacaciones familiares, cercano a restaurantes, cafés y parques.",
+  "un santuario de tranquilidad con acabados de lujo, seguridad 24 horas y todas las comodidades premium.",
+  "con diseño de interiores moderno, luz natural en todos los espacios y una terraza privada de ensueño."
+];
+
+// High quality Unsplash image links grouped by type
+const STOCK_IMAGES = {
+  "Apartamento": [
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1000&q=80",
+    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1000&q=80",
+    "https://images.unsplash.com/photo-1502672090847-032d266d91d8?w=1000&q=80",
+    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1000&q=80",
+    "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1000&q=80"
+  ],
+  "Casa": [
+    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1000&q=80",
+    "https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1000&q=80",
+    "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1000&q=80",
+    "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=1000&q=80",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1000&q=80"
+  ],
+  "Cabaña": [
+    "https://images.unsplash.com/photo-1508333706533-1ab43ecb1606?w=1000&q=80",
+    "https://images.unsplash.com/photo-1510798831971-661eb04b3739?w=1000&q=80",
+    "https://images.unsplash.com/photo-1449034446853-66c86144b0ad?w=1000&q=80",
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1000&q=80",
+    "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1000&q=80"
+  ],
+  "Habitación": [
+    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=1000&q=80",
+    "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1000&q=80",
+    "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=1000&q=80",
+    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=1000&q=80",
+    "https://images.unsplash.com/photo-1540518614846-7eded433c457?w=1000&q=80"
+  ]
+};
+
+// Public reliable panorama equirectangular image
+const PANORAMA_IMAGE = "https://photo-sphere-viewer-data.netlify.app/assets/sphere.jpg";
+
+// Owners to distribute the properties
+const OWNER_IDS = [
+  "73151243-0458-42cb-9204-63e8b47a7c88", // Usuario Prueba 1
+  "202a6527-21a2-4dca-ba1d-0f8f184de1f3", // Rafael Cristancho
+  "10998ceb-2ece-4fe3-9e2a-0110ab8752a9"  // Brayan
+];
+
+async function seed() {
+  console.log("🚀 Starting database seeding...");
+
+  try {
+    // 1. Clean up references in correct order due to foreign keys
+    console.log("🧹 Cleaning up old housing tables...");
+    
+    const { error: delImagesErr } = await supabase.from('housing_images').delete().neq('id_image', 0);
+    if (delImagesErr) console.log("Note on images cleanup:", delImagesErr.message);
+
+    const { error: delServicesErr } = await supabase.from('housing_service').delete().neq('id_housing', 0);
+    if (delServicesErr) console.log("Note on services cleanup:", delServicesErr.message);
+
+    const { error: delAvailErr } = await supabase.from('availability').delete().neq('id_availability', 0);
+    if (delAvailErr) console.log("Note on availability cleanup:", delAvailErr.message);
+
+    const { error: delHousingErr } = await supabase.from('housing').delete().neq('id_housing', 0);
+    if (delHousingErr) {
+      console.error("❌ Error cleaning up housing table:", delHousingErr.message);
+      process.exit(1);
+    }
+    console.log("✅ Tables cleared successfully.");
+
+    // 2. Generate 55 properties
+    console.log("Generating 55 premium housings...");
+    const housingsToInsert = [];
+
+    for (let i = 1; i <= 55; i++) {
+      const city = CITIES[i % CITIES.length];
+      const type = TYPES[i % TYPES.length];
+      const adjective = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+      const neighborhood = city.neighborhoods[Math.floor(Math.random() * city.neighborhoods.length)];
+      const detail = DETAILS[Math.floor(Math.random() * DETAILS.length)];
+      
+      const name = `${adjective} ${type.name} en ${city.name} (${neighborhood})`;
+      const description = `${type.name} de diseño en el exclusivo sector de ${neighborhood}, ${city.name}. Cuenta ${detail}`;
+      const address = `Calle ${Math.floor(Math.random() * 100) + 1} # ${Math.floor(Math.random() * 80) + 1} - ${Math.floor(Math.random() * 90) + 1}`;
+      
+      const price_per_night = (Math.floor(Math.random() * 8) + 2) * 100000; // 200,000 to 900,000 COP
+      const capacity = Math.floor(Math.random() * 5) + 2; // 2 to 6 guests
+      const id_owner = OWNER_IDS[i % OWNER_IDS.length];
+
+      // Add coordinate jitter from city center
+      const lat = city.latCenter + (Math.random() - 0.5) * 0.04;
+      const lng = city.lngCenter + (Math.random() - 0.5) * 0.04;
+
+      housingsToInsert.push({
+        id_owner,
+        id_type: type.id,
+        name,
+        status: "available",
+        description,
+        country: "Colombia",
+        department: city.department,
+        municipality: city.name,
+        address,
+        price_per_night,
+        capacity,
+        latitude: parseFloat(lat.toFixed(6)),
+        longitude: parseFloat(lng.toFixed(6)),
+        currency: "COP"
+      });
+    }
+
+    // 3. Insert housings
+    console.log("Saving housings to database...");
+    const { data: insertedHousings, error: insErr } = await supabase
+      .from('housing')
+      .insert(housingsToInsert)
+      .select();
+
+    if (insErr) {
+      console.error("❌ Error inserting housings:", insErr.message);
+      process.exit(1);
+    }
+    console.log(`✅ Successfully seeded ${insertedHousings.length} housings.`);
+
+    // 4. Seeding images for each housing
+    console.log("Seeding premium gallery and 360 panorama images...");
+    const imagesToInsert = [];
+
+    insertedHousings.forEach((housing) => {
+      // Get type key
+      let typeKey = "Apartamento";
+      if (housing.id_type === 2) typeKey = "Casa";
+      if (housing.id_type === 3) typeKey = "Cabaña";
+      if (housing.id_type === 4) typeKey = "Habitación";
+
+      const urls = STOCK_IMAGES[typeKey];
+      
+      // Select 2 random normal images
+      const shuffled = [...urls].sort(() => 0.5 - Math.random());
+      const selectedNormal = shuffled.slice(0, 2);
+
+      // Add normal images
+      selectedNormal.forEach((url) => {
+        imagesToInsert.push({
+          id_housing: housing.id_housing,
+          image_url: url,
+          is_panorama: false
+        });
+      });
+
+      // Add 1 panorama image for the 360 viewer
+      imagesToInsert.push({
+        id_housing: housing.id_housing,
+        image_url: PANORAMA_IMAGE,
+        is_panorama: true
+      });
+    });
+
+    console.log("Saving images to database...");
+    const { data: insertedImages, error: imgInsErr } = await supabase
+      .from('housing_images')
+      .insert(imagesToInsert)
+      .select();
+
+    if (imgInsErr) {
+      console.error("❌ Error inserting images:", imgInsErr.message);
+      process.exit(1);
+    }
+    console.log(`✅ Successfully seeded ${insertedImages.length} images to the galleries.`);
+    console.log("🎉 Seeding completed successfully!");
+
+  } catch (error) {
+    console.error("❌ Unexpected error during seed:", error);
+  }
+}
+
+seed();
