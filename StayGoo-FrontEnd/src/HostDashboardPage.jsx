@@ -1802,6 +1802,28 @@ function HostDashboardPage() {
               placeholder="Configuración de visibilidad"
             />
           </label>
+          <div className="hostFormRow" style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
+            <label>
+              Latitud
+              <input
+                type="number"
+                step="any"
+                value={editListingForm.latitude || ""}
+                onChange={(event) => updateEditField("latitude", event.target.value)}
+                placeholder="Ej: 6.2442"
+              />
+            </label>
+            <label>
+              Longitud
+              <input
+                type="number"
+                step="any"
+                value={editListingForm.longitude || ""}
+                onChange={(event) => updateEditField("longitude", event.target.value)}
+                placeholder="Ej: -75.5748"
+              />
+            </label>
+          </div>
           <div style={{ gridColumn: '1 / -1', height: '300px', borderRadius: '8px', overflow: 'hidden', marginTop: '8px' }}>
             <MapPicker
               position={
@@ -2192,6 +2214,28 @@ function HostDashboardPage() {
               placeholder="Configuración de visibilidad"
             />
           </label>
+          <div className="hostFormRow" style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
+            <label>
+              Latitud
+              <input
+                type="number"
+                step="any"
+                value={newListingForm.latitude || ""}
+                onChange={(event) => updateNewField("latitude", event.target.value)}
+                placeholder="Ej: 6.2442"
+              />
+            </label>
+            <label>
+              Longitud
+              <input
+                type="number"
+                step="any"
+                value={newListingForm.longitude || ""}
+                onChange={(event) => updateNewField("longitude", event.target.value)}
+                placeholder="Ej: -75.5748"
+              />
+            </label>
+          </div>
           <div style={{ gridColumn: '1 / -1', height: '300px', borderRadius: '8px', overflow: 'hidden', marginTop: '8px' }}>
             <MapPicker
               position={

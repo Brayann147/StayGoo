@@ -29,18 +29,34 @@ export function MapPicker({ position, onChange, readOnly = false }) {
   const lat = position && typeof position.lat === "number" ? position.lat : defaultCenter.lat;
   const lng = position && typeof position.lng === "number" ? position.lng : defaultCenter.lng;
 
+  // Helper to construct popup HTML
+  const getPopupContent = (lLat, lLng) => {
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lLat},${lLng}`;
+    return `
+      <div style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 4px; min-width: 150px;">
+        <strong style="display: block; margin-bottom: 6px; color: #1e293b; font-size: 13px;">
+          ${readOnly ? "Ubicación del alojamiento" : "Ubicación seleccionada"}
+        </strong>
+        <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
+           style="display: inline-block; background-color: #ff815f; color: white; padding: 6px 12px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 11px; margin-top: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          🚗 ¿Cómo llegar? (Google Maps)
+        </a>
+      </div>
+    `;
+  };
+
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Create map instance
+    // Create map instance - Always allow zooming and panning of the map
     const map = L.map(mapContainerRef.current, {
-      zoomControl: !readOnly,
-      dragging: !readOnly,
-      touchZoom: !readOnly,
-      scrollWheelZoom: !readOnly,
-      doubleClickZoom: !readOnly,
-      boxZoom: !readOnly,
-      keyboard: !readOnly,
+      zoomControl: true,
+      dragging: true,
+      touchZoom: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true,
+      keyboard: true,
       attributionControl: true
     }).setView([lat, lng], 13);
 
@@ -52,24 +68,33 @@ export function MapPicker({ position, onChange, readOnly = false }) {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
-    // Create marker
+    // Create marker - Drag is only enabled when not readOnly
     const marker = L.marker([lat, lng], {
       draggable: !readOnly
     }).addTo(map);
 
     markerRef.current = marker;
 
+    // Bind initial popup content
+    marker.bindPopup(getPopupContent(lat, lng));
+
     // Hook events if interactive
-    if (!readOnly && onChange) {
+    if (!readOnly) {
       marker.on("dragend", () => {
         const latLng = marker.getLatLng();
-        onChange({ lat: latLng.lat, lng: latLng.lng });
+        marker.setPopupContent(getPopupContent(latLng.lat, latLng.lng));
+        if (onChange) {
+          onChange({ lat: latLng.lat, lng: latLng.lng });
+        }
       });
 
       map.on("click", (e) => {
         const latLng = e.latlng;
         marker.setLatLng(latLng);
-        onChange({ lat: latLng.lat, lng: latLng.lng });
+        marker.setPopupContent(getPopupContent(latLng.lat, latLng.lng));
+        if (onChange) {
+          onChange({ lat: latLng.lat, lng: latLng.lng });
+        }
       });
     }
 
@@ -92,6 +117,7 @@ export function MapPicker({ position, onChange, readOnly = false }) {
       const markerLatLng = markerRef.current.getLatLng();
       if (markerLatLng.lat !== currentLat || markerLatLng.lng !== currentLng) {
         markerRef.current.setLatLng([currentLat, currentLng]);
+        markerRef.current.setPopupContent(getPopupContent(currentLat, currentLng));
         mapRef.current.setView([currentLat, currentLng], 13);
       }
     }

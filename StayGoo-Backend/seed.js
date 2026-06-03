@@ -66,29 +66,29 @@ const DETAILS = [
   "con diseño de interiores moderno, luz natural en todos los espacios y una terraza privada de ensueño."
 ];
 
-// High quality Unsplash image links grouped by type
+// Validated high quality Unsplash image links
 const STOCK_IMAGES = {
   "Apartamento": [
     "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1000&q=80",
     "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1000&q=80",
-    "https://images.unsplash.com/photo-1502672090847-032d266d91d8?w=1000&q=80",
+    "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=1000&q=80",
     "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1000&q=80",
     "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1000&q=80",
-    "https://images.unsplash.com/photo-1505693395321-883724634266?w=1000&q=80",
+    "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=1000&q=80",
     "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1000&q=80",
     "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=1000&q=80",
     "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=1000&q=80",
-    "https://images.unsplash.com/photo-1560185127-6a2806647f81?w=1000&q=80",
+    "https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=1000&q=80",
     "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1000&q=80",
     "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1000&q=80",
-    "https://images.unsplash.com/photo-1617806118233-18e1db207f62?w=1000&q=80",
+    "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=1000&q=80",
     "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=1000&q=80",
-    "https://images.unsplash.com/photo-1527030280862-64139fbe04ca?w=1000&q=80",
+    "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=1000&q=80",
     "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1000&q=80",
     "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=1000&q=80",
-    "https://images.unsplash.com/photo-1615876234886-fd9a39faa97f?w=1000&q=80",
+    "https://images.unsplash.com/photo-1591088398332-8a7791972843?w=1000&q=80",
     "https://images.unsplash.com/photo-1617104551722-3b2d51366400?w=1000&q=80",
-    "https://images.unsplash.com/photo-1502672545511-3c2294833c87?w=1000&q=80"
+    "https://images.unsplash.com/photo-1568495248636-6432b97bd949?w=1000&q=80"
   ],
   "Casa": [
     "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1000&q=80",
@@ -109,7 +109,7 @@ const STOCK_IMAGES = {
     "https://images.unsplash.com/photo-1592595896551-12b371d546d5?w=1000&q=80",
     "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=1000&q=80",
     "https://images.unsplash.com/photo-1510798831971-661eb04b3739?w=1000&q=80",
-    "https://images.unsplash.com/photo-1502005229762-fc1b2b812ca5?w=1000&q=80",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1000&q=80", // replaced duplicate
     "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=1000&q=80"
   ],
   "Cabaña": [
@@ -124,7 +124,7 @@ const STOCK_IMAGES = {
     "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1000&q=80",
     "https://images.unsplash.com/photo-1544816155-12df9643f363?w=1000&q=80",
     "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1000&q=80",
-    "https://images.unsplash.com/photo-1472214222541-d510753a4907?w=1000&q=80",
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1000&q=80", // replaced broken
     "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1000&q=80",
     "https://images.unsplash.com/photo-1433832597046-4f10e10ac764?w=1000&q=80",
     "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1000&q=80",
@@ -140,7 +140,7 @@ const STOCK_IMAGES = {
     "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=1000&q=80",
     "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=1000&q=80",
     "https://images.unsplash.com/photo-1540518614846-7eded433c457?w=1000&q=80",
-    "https://images.unsplash.com/photo-1582719478250-c89cae4db85b?w=1000&q=80",
+    "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1000&q=80", // replaced broken
     "https://images.unsplash.com/photo-1591088398332-8a7791972843?w=1000&q=80",
     "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=1000&q=80",
     "https://images.unsplash.com/photo-1568495248636-6432b97bd949?w=1000&q=80",
@@ -151,21 +151,38 @@ const STOCK_IMAGES = {
     "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=1000&q=80",
     "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1000&q=80",
     "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1000&q=80",
-    "https://images.unsplash.com/photo-1617806118233-18e1db207f62?w=1000&q=80",
-    "https://images.unsplash.com/photo-1527030280862-64139fbe04ca?w=1000&q=80",
+    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=1000&q=80", // replaced broken
+    "https://images.unsplash.com/photo-1540518614846-7eded433c457?w=1000&q=80", // replaced broken
     "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1000&q=80",
-    "https://images.unsplash.com/photo-1615876234886-fd9a39faa97f?w=1000&q=80"
+    "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=1000&q=80"  // replaced broken
   ]
 };
 
 // Public reliable panorama equirectangular image
 const PANORAMA_IMAGE = "https://photo-sphere-viewer-data.netlify.app/assets/sphere.jpg";
 
-// Owners to distribute the properties
+// Owners (Hosts)
 const OWNER_IDS = [
-  "73151243-0458-42cb-9204-63e8b47a7c88", // Usuario Prueba 1
+  "73151243-0458-42cb-9204-63e8b47a7c88", // Juan Esteban
   "202a6527-21a2-4dca-ba1d-0f8f184de1f3", // Rafael Cristancho
   "10998ceb-2ece-4fe3-9e2a-0110ab8752a9"  // Brayan
+];
+
+// Travelers for reviews
+const TRAVELER_IDS = [
+  "53f6079f-8e5b-47d5-b6a3-eaf6fcd8e044", // Eduardo Perez
+  "79bcd0cb-7a06-4d2a-8cb5-8cbad6460908", // Juanki Merchan
+  "1cd3d054-bc9e-4099-827a-448684a827f7", // Andres Ascencio
+  "de42b965-647c-4d87-a19e-15a713c9f51d"  // Camilo Perezz
+];
+
+const REVIEW_TEMPLATES = [
+  { rating: 5, cleanliness: 5, communication: 5, check_in: 5, accuracy: 5, location: 5, value: 5, comment: "Excelente alojamiento. Todo estuvo muy limpio, la vista es increíble y el anfitrión muy amable." },
+  { rating: 5, cleanliness: 5, communication: 5, check_in: 5, accuracy: 5, location: 4, value: 5, comment: "Un lugar maravilloso para descansar. Muy cómodo y con todo lo necesario. Altamente recomendado." },
+  { rating: 4, cleanliness: 4, communication: 5, check_in: 5, accuracy: 4, location: 5, value: 4, comment: "Muy buena ubicación, cerca de todo. Las fotos describen tal cual el lugar. Una gran experiencia." },
+  { rating: 5, cleanliness: 5, communication: 4, check_in: 5, accuracy: 5, location: 5, value: 5, comment: "Estadía fenomenal. Las camas son comodísimas y la decoración del lugar es impecable. Volvería sin duda." },
+  { rating: 4, cleanliness: 4, communication: 4, check_in: 4, accuracy: 5, location: 4, value: 4, comment: "Alojamiento muy agradable y bien equipado. Ideal para pasar unos días en tranquilidad." },
+  { rating: 5, cleanliness: 5, communication: 5, check_in: 5, accuracy: 5, location: 5, value: 4, comment: "El mejor lugar en el que me he quedado. Limpieza excepcional y un trato de primera." }
 ];
 
 async function seed() {
@@ -173,8 +190,14 @@ async function seed() {
 
   try {
     // 1. Clean up references in correct order due to foreign keys
-    console.log("🧹 Cleaning up old housing tables...");
+    console.log("🧹 Cleaning up old database tables...");
     
+    const { error: delReviewErr } = await supabase.from('review').delete().neq('id_review', 0);
+    if (delReviewErr) console.log("Note on reviews cleanup:", delReviewErr.message);
+
+    const { error: delBookingErr } = await supabase.from('booking').delete().neq('id_booking', 0);
+    if (delBookingErr) console.log("Note on bookings cleanup:", delBookingErr.message);
+
     const { error: delImagesErr } = await supabase.from('housing_images').delete().neq('id_image', 0);
     if (delImagesErr) console.log("Note on images cleanup:", delImagesErr.message);
 
@@ -250,7 +273,6 @@ async function seed() {
     const imagesToInsert = [];
 
     insertedHousings.forEach((housing) => {
-      // Get type key
       let typeKey = "Apartamento";
       if (housing.id_type === 2) typeKey = "Casa";
       if (housing.id_type === 3) typeKey = "Cabaña";
@@ -262,7 +284,6 @@ async function seed() {
       const shuffled = [...urls].sort(() => 0.5 - Math.random());
       const selectedNormal = shuffled.slice(0, 5);
 
-      // Add normal images
       selectedNormal.forEach((url) => {
         imagesToInsert.push({
           id_housing: housing.id_housing,
@@ -290,6 +311,70 @@ async function seed() {
       process.exit(1);
     }
     console.log(`✅ Successfully seeded ${insertedImages.length} images to the galleries.`);
+
+    // 5. Seeding bookings and reviews
+    console.log("Seeding completed bookings and realistic reviews...");
+    const bookingsToInsert = [];
+    const bookingsMetadata = []; // Keep track of housing/user pairing
+
+    insertedHousings.forEach((housing) => {
+      // Pick 3 random distinct travelers
+      const shuffledTravelers = [...TRAVELER_IDS].sort(() => 0.5 - Math.random());
+      const selectedTravelers = shuffledTravelers.slice(0, 3);
+
+      selectedTravelers.forEach((travelerId) => {
+        bookingsToInsert.push({
+          id_user: travelerId,
+          id_housing: housing.id_housing,
+          start_date: "2026-05-10",
+          end_date: "2026-05-15",
+          total_price: housing.price_per_night * 5,
+          status: "completed"
+        });
+      });
+    });
+
+    console.log("Saving bookings to database...");
+    const { data: insertedBookings, error: bookInsErr } = await supabase
+      .from('booking')
+      .insert(bookingsToInsert)
+      .select();
+
+    if (bookInsErr) {
+      console.error("❌ Error inserting bookings:", bookInsErr.message);
+      process.exit(1);
+    }
+    console.log(`✅ Successfully seeded ${insertedBookings.length} bookings.`);
+
+    // Insert reviews linked to the created bookings
+    const reviewsToInsert = [];
+    insertedBookings.forEach((booking) => {
+      const template = REVIEW_TEMPLATES[Math.floor(Math.random() * REVIEW_TEMPLATES.length)];
+      reviewsToInsert.push({
+        id_booking: booking.id_booking,
+        rating: template.rating,
+        comment: template.comment,
+        date: "2026-05-16",
+        cleanliness_rating: template.cleanliness,
+        communication_rating: template.communication,
+        check_in_rating: template.check_in,
+        accuracy_rating: template.accuracy,
+        location_rating: template.location,
+        value_rating: template.value
+      });
+    });
+
+    console.log("Saving reviews to database...");
+    const { data: insertedReviews, error: revInsErr } = await supabase
+      .from('review')
+      .insert(reviewsToInsert)
+      .select();
+
+    if (revInsErr) {
+      console.error("❌ Error inserting reviews:", revInsErr.message);
+      process.exit(1);
+    }
+    console.log(`✅ Successfully seeded ${insertedReviews.length} reviews.`);
     console.log("🎉 Seeding completed successfully!");
 
   } catch (error) {

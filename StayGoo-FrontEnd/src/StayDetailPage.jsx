@@ -131,7 +131,7 @@ function StayDetailPage() {
             ...prev,
             ...latest,
             title: latest.name || prev.title,
-            location: latest.address ? `${latest.address}, ${latest.city}` : latest.city || prev.location,
+            location: latest.address ? `${latest.address}, ${latest.municipality || latest.city || ""}` : (latest.municipality || latest.city) || prev.location,
             maxGuests: latest.capacity || prev.maxGuests,
             price: `$${latest.price_per_night || 0}/noche`,
             image: firstImage,

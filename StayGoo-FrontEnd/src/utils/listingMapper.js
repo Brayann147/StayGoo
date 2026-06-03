@@ -46,7 +46,7 @@ export function mapHousingToListing(item, index = 0) {
   const firstImage =
     normalImages.length > 0 ? normalImages[0].image_url : DEFAULT_IMAGE;
 
-  const city = item.city || "Ciudad Desconocida";
+  const city = item.municipality || item.city || "Ciudad Desconocida";
   const address = item.address || "";
 
   return {
