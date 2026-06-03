@@ -6,7 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./StayDetailPage.css";
 import PanoramaViewer from "./PanoramaViewer";
 import { MapPicker } from "./components/MapPicker";
-import { getHousingById, getReviewsByHousing, createReview, getMyBookings } from "./api";
+import { getHousingById, getReviewsByHousing, createReview, getMyBookings, getHousingBookedDates } from "./api";
 import {
   isFavorite as isListingFavorite,
   toggleFavoriteId,
@@ -274,6 +274,31 @@ function StayDetailPage() {
   const [guestCount, setGuestCount] = useState(Math.min(maxGuestsNumber, 2));
   const [checkInDate, setCheckInDate] = useState(defaultCheckIn);
   const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
+  const [excludedDates, setExcludedDates] = useState([]);
+
+  // Cargar fechas bloqueadas del alojamiento
+  useEffect(() => {
+    const rawId = stay?.id_housing || stay?.realId || stay?.id;
+    if (!rawId) return;
+    const cleanId = typeof rawId === "string" ? rawId.replace("lst-", "") : rawId;
+    getHousingBookedDates(cleanId)
+      .then(bookings => {
+        if (!Array.isArray(bookings)) return;
+        const dates = [];
+        bookings.forEach(b => {
+          const start = new Date(b.start_date);
+          const end = new Date(b.end_date);
+          // Generar cada día individual dentro del rango reservado
+          const cur = new Date(start);
+          while (cur < end) {
+            dates.push(new Date(cur));
+            cur.setDate(cur.getDate() + 1);
+          }
+        });
+        setExcludedDates(dates);
+      })
+      .catch(() => {});
+  }, [stay?.id_housing, stay?.realId, stay?.id]);
 
   useEffect(() => {
     if (checkOutDate <= checkInDate) setCheckOutDate(addDays(checkInDate, 1));
@@ -291,6 +316,20 @@ function StayDetailPage() {
       window.localStorage.removeItem("staygooAccessRole");
       const redirectTo = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
       navigate(`/login?redirect=${redirectTo}`);
+      return;
+    }
+    // Verificar que las fechas seleccionadas no estén bloqueadas
+    const hasConflict = excludedDates.some(blocked => {
+      const b = new Date(blocked);
+      b.setHours(0, 0, 0, 0);
+      const inD = new Date(checkInDate); inD.setHours(0, 0, 0, 0);
+      const outD = new Date(checkOutDate); outD.setHours(0, 0, 0, 0);
+      return b >= inD && b < outD;
+    });
+    if (hasConflict) {
+      import('sweetalert2').then(({ default: Swal }) =>
+        Swal.fire('Fechas no disponibles', 'Las fechas seleccionadas se superponen con una reserva existente. Por favor, elige otras fechas.', 'warning')
+      );
       return;
     }
     const paymentPayload = encodeURIComponent(JSON.stringify({
@@ -574,6 +613,7 @@ function StayDetailPage() {
                     onChange={(date) => { if (date) { setCheckInDate(date); if (checkOutDate <= date) setCheckOutDate(addDays(date, 1)); } }}
                     selectsStart startDate={checkInDate} endDate={checkOutDate}
                     minDate={new Date()} maxDate={checkOutDate || undefined}
+                    excludeDates={excludedDates}
                     locale="es" dateFormat="dd/MM/yyyy"
                     className="stayDetailBookingDateInput"
                     calendarClassName="stayDetailBookingCalendar"
@@ -588,6 +628,7 @@ function StayDetailPage() {
                     onChange={(date) => { if (date) setCheckOutDate(date); }}
                     selectsEnd startDate={checkInDate} endDate={checkOutDate}
                     minDate={checkInDate ? addDays(checkInDate, 1) : addDays(new Date(), 1)}
+                    excludeDates={excludedDates}
                     locale="es" dateFormat="dd/MM/yyyy"
                     className="stayDetailBookingDateInput"
                     calendarClassName="stayDetailBookingCalendar"

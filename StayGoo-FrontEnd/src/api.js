@@ -245,6 +245,14 @@ export async function getHostBookings() {
 }
 
 /**
+ * Obtener reservas activas de un alojamiento (para bloquear fechas)
+ * @param {string|number} id_housing
+ */
+export async function getHousingBookedDates(id_housing) {
+  return request(`/bookings/housing/${id_housing}`, { public: true });
+}
+
+/**
  * Cancelar una reserva
  * @param {string|number} id_booking
  */
