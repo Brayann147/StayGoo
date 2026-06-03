@@ -1,3 +1,4 @@
+// review.routes.js — v2 (added GET /housing/:id_housing public route)
 import { Router } from 'express';
 import { createReview, getReviewsByBooking, getReviewsByHousing } from '../controllers/review.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
