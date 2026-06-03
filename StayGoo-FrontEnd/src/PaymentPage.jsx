@@ -79,8 +79,8 @@ export default function PaymentPage() {
         status: 'confirmed',
       });
 
-      // Redirigir al perfil con la reserva ya creada
-      navigate('/member-dashboard', { state: { initialSection: 'profile' } });
+      // Redirigir a "Mis viajes" para ver la reserva recién creada
+      navigate('/member-dashboard', { state: { initialSection: 'trips' } });
 
     } catch (err) {
       console.error('Error al registrar la reserva:', err);
