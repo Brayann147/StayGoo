@@ -81,3 +81,29 @@ export const getHostBookings = async (id_owner) => {
     if (error) throw error;
     return data;
 };
+
+// Actualizar fechas de una reserva
+export const updateBooking = async (id_booking, { start_date, end_date }) => {
+    // Primero obtener el precio por noche del alojamiento
+    const { data: existing, error: fetchErr } = await supabase
+        .from('booking')
+        .select('*, housing(price_per_night)')
+        .eq('id_booking', id_booking)
+        .single();
+    if (fetchErr) throw fetchErr;
+
+    const nights = Math.ceil(
+        (new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24)
+    );
+    const pricePerNight = existing.housing?.price_per_night || 0;
+    const total_price = nights * pricePerNight;
+
+    const { data, error } = await supabase
+        .from('booking')
+        .update({ start_date, end_date, total_price })
+        .eq('id_booking', id_booking)
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+};

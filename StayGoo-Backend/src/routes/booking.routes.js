@@ -3,6 +3,7 @@ import {
     createBooking,
     getBookingById,
     cancelBooking,
+    updateBooking,
     getMyBookings,
     getHostBookings
 } from '../controllers/booking.controller.js';
@@ -24,5 +25,8 @@ router.get('/:id_booking', authenticate, getBookingById);
 
 // PUT /api/bookings/:id_booking/cancel  → Cancelar reserva (protegido)
 router.put('/:id_booking/cancel', authenticate, cancelBooking);
+
+// PUT /api/bookings/:id_booking  → Cambiar fechas de reserva (protegido)
+router.put('/:id_booking', authenticate, updateBooking);
 
 export default router;

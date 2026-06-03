@@ -56,3 +56,20 @@ export const getHostBookings = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+// PUT /api/bookings/:id_booking  → Actualizar fechas de reserva
+export const updateBooking = async (req, res) => {
+    try {
+        const { id_booking } = req.params;
+        const { start_date, end_date } = req.body;
+        if (!start_date || !end_date) {
+            return res.status(400).json({ error: 'Se requieren start_date y end_date.' });
+        }
+        if (new Date(start_date) >= new Date(end_date)) {
+            return res.status(400).json({ error: 'La fecha de salida debe ser posterior a la de llegada.' });
+        }
+        const data = await bookingService.updateBooking(id_booking, { start_date, end_date });
+        res.status(200).json({ message: 'Fechas actualizadas.', data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
