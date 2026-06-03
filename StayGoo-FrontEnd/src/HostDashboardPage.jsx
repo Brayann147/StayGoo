@@ -42,7 +42,7 @@ import { SettingsSection } from "./components/SettingsSection";
 import logoImage from "./assets/logoo.png";
 import { createHousing, getHousings, updateHousing, getHostBookings, getMyProfile, uploadHousingImage, deleteHousingImage, fetchDepartmentsByCountry, fetchCitiesByDepartment } from "./api";
 import { useAuthUser } from "./useAuthUser";
-import { GoogleMapPicker } from "./components/GoogleMapPicker";
+import { MapPicker } from "./components/MapPicker";
 import "./HostDashboardPage.css";
 
 const sidebarItems = [
@@ -1803,8 +1803,7 @@ function HostDashboardPage() {
             />
           </label>
           <div style={{ gridColumn: '1 / -1', height: '300px', borderRadius: '8px', overflow: 'hidden', marginTop: '8px' }}>
-            <GoogleMapPicker
-              apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+            <MapPicker
               position={
                 editListingForm.latitude && editListingForm.longitude
                   ? { lat: parseFloat(editListingForm.latitude), lng: parseFloat(editListingForm.longitude) }
@@ -2194,8 +2193,7 @@ function HostDashboardPage() {
             />
           </label>
           <div style={{ gridColumn: '1 / -1', height: '300px', borderRadius: '8px', overflow: 'hidden', marginTop: '8px' }}>
-            <GoogleMapPicker
-              apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+            <MapPicker
               position={
                 newListingForm.latitude && newListingForm.longitude
                   ? { lat: parseFloat(newListingForm.latitude), lng: parseFloat(newListingForm.longitude) }
