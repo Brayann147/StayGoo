@@ -38,22 +38,38 @@ export function TripsSection() {
     let diffDays = Math.ceil((start - new Date()) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) diffDays = 0;
 
+    // Obtener imagen real del alojamiento (la primera no-panorama)
+    const images = b.housing?.housing_images || [];
+    const normalImages = images.filter(img => !img.is_panorama);
+    const coverImage = normalImages.length > 0
+      ? normalImages[0].image_url
+      : "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1400&q=80";
+
+    // Ubicación
+    const location = [b.housing?.municipality, b.housing?.department, b.housing?.country]
+      .filter(Boolean).join(', ');
+
     return {
       id: b.id_booking,
       title: b.housing?.name || "Alojamiento",
+      location: location || b.housing?.address || "",
       dates: `${startStr} - ${endStr}`,
-      image: "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1400&q=80",
+      status: b.status,
+      image: coverImage,
       countdown: { days: String(diffDays).padStart(2, "0"), hrs: "00", min: "00" }
     };
   }) : [
     {
       id: "no-res",
       title: "No tienes reservas aún",
+      location: "",
       dates: "Planea tu próximo destino con nosotros",
+      status: null,
       image: "https://images.unsplash.com/photo-1505693314120-0d443867891c?auto=format&fit=crop&w=1400&q=80",
       countdown: { days: "0", hrs: "0", min: "0" }
     }
   ];
+
 
   const hasCarousel = programmedReservations.length > 1;
   const currentReservation = programmedReservations[activeReservation] || programmedReservations[0];
@@ -200,9 +216,35 @@ export function TripsSection() {
             <div className="spotlightInfo">
               <small>PRÓXIMA EXPERIENCIA</small>
               <h3>{currentReservation?.title}</h3>
+              {currentReservation?.location && (
+                <p style={{ fontSize: '13px', opacity: 0.8, margin: '2px 0 0' }}>
+                  📍 {currentReservation.location}
+                </p>
+              )}
 
               <div className="spotlightMetaRow">
                 <p>{currentReservation?.dates}</p>
+                {currentReservation?.status && currentReservation.id !== "no-res" && (
+                  <span style={{
+                    padding: '2px 10px',
+                    borderRadius: '20px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.5px',
+                    textTransform: 'uppercase',
+                    background:
+                      currentReservation.status === 'confirmed' ? 'rgba(34,197,94,0.85)' :
+                      currentReservation.status === 'completed' ? 'rgba(99,102,241,0.85)' :
+                      currentReservation.status === 'pending'   ? 'rgba(234,179,8,0.85)' :
+                                                                  'rgba(239,68,68,0.85)',
+                    color: '#fff'
+                  }}>
+                    {currentReservation.status === 'confirmed' ? '✅ Confirmada' :
+                     currentReservation.status === 'completed' ? '✔️ Completada' :
+                     currentReservation.status === 'pending'   ? '⏳ Pendiente' :
+                                                                 '❌ Cancelada'}
+                  </span>
+                )}
 
                 {hasCarousel ? (
                   <div className="spotlightDots" aria-hidden="true">
@@ -216,6 +258,7 @@ export function TripsSection() {
                 ) : null}
               </div>
             </div>
+
 
             {currentReservation.id !== "no-res" && (
                 <div className="spotlightCountdown">
