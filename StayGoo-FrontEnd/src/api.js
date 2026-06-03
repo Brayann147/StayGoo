@@ -230,9 +230,39 @@ export async function createBooking(bookingData) {
 
 /**
  * Obtener reservas del usuario autenticado (viajes)
+ * Llama directamente a Supabase REST para evitar dependencia del backend de Render.
  */
 export async function getMyBookings() {
-  return request("/bookings/me");
+  const token = localStorage.getItem("staygooToken");
+  if (!token) return [];
+
+  // Decodificar el user ID del JWT (claim "sub")
+  let userId = null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    userId = payload.sub;
+  } catch {
+    return [];
+  }
+
+  const SUPABASE_URL = "https://qgsqhczniickikrdlrmb.supabase.co";
+  const SUPABASE_ANON = "sb_publishable_7-DL_6Ymj8LtY4ojyV6yCw_bGezGeNq";
+
+  const url = `${SUPABASE_URL}/rest/v1/booking?select=${encodeURIComponent(
+    `*,housing(id_housing,name,municipality,department,country,address,price_per_night,housing_images(image_url,is_panorama))`
+  )}&id_user=eq.${userId}&order=start_date.asc`;
+
+  const res = await fetch(url, {
+    headers: {
+      "apikey": SUPABASE_ANON,
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    }
+  });
+
+  if (!res.ok) return [];
+  return await res.json();
 }
 
 /**
