@@ -59,8 +59,8 @@ export default function PaymentPage() {
     }
   }, [searchParams]);
 
-  const handleSuccess = (paymentIntent) => {
-    navigate('/member-dashboard');
+  const handleSuccess = () => {
+    navigate('/member-dashboard', { state: { initialSection: 'profile' } });
   };
 
   if (loading) {

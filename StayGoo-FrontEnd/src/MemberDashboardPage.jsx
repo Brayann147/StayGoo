@@ -14,8 +14,7 @@ import { ProfileSection } from "./components/ProfileSection";
 import { SettingsSection } from "./components/SettingsSection";
 import "./MemberDashboardPage.css";
 
-const DEFAULT_PROFILE_PHOTO =
-  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80";
+const DEFAULT_PROFILE_PHOTO = null;
 
 function MemberDashboardPage() {
   const navigate = useNavigate();
@@ -82,7 +81,7 @@ function MemberDashboardPage() {
       case "messages":
         return <MessagesSection />;
       case "profile":
-        return <ProfileSection />;
+        return <ProfileSection profilePhoto={profilePhoto} />;
       case "settings":
         return (
           <SettingsSection

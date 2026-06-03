@@ -1215,6 +1215,9 @@
   padding: 24px;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(27, 44, 72, 0.08);
+  max-height: 520px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .reservationHistorySection h3 {

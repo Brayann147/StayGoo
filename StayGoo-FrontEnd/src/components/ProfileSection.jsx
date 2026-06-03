@@ -3,7 +3,7 @@ import { Mail, Phone, MapPin, Calendar, Check, User } from "lucide-react";
 import { getMyProfile, getMyBookings } from "../api";
 import { useAuthUser } from "../useAuthUser";
 
-export function ProfileSection() {
+export function ProfileSection({ profilePhoto }) {
   const authUser = useAuthUser();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -60,14 +60,16 @@ export function ProfileSection() {
             const mapped = bookings.map(b => {
               const housingInfo = b.housing || {};
               const nights = Math.ceil((new Date(b.end_date) - new Date(b.start_date)) / (1000 * 60 * 60 * 24)) || 1;
+              const images = b.housing?.housing_images || [];
+              const normalImg = images.find(img => !img.is_panorama);
               return {
                 id: b.id_booking,
                 title: housingInfo.name || "Alojamiento",
-                location: housingInfo.city || housingInfo.address || "Ubicación",
+                location: housingInfo.municipality || housingInfo.address || "Ubicación",
                 dates: `${new Date(b.start_date).toLocaleDateString()} - ${new Date(b.end_date).toLocaleDateString()}`,
-                totalPrice: b.total_price ? `$${b.total_price}` : "N/A",
+                totalPrice: b.total_price ? `$${Number(b.total_price).toLocaleString()}` : "N/A",
                 totalNights: nights,
-                image: "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=400&q=80",
+                image: normalImg?.image_url || "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=400&q=80",
                 status: new Date(b.start_date) > new Date() ? "upcoming" : "completed",
                 rating: b.rating || null,
               };
@@ -119,8 +121,11 @@ export function ProfileSection() {
       <div className="profileContainer">
         <section className="profileInfoSection">
           <div className="profileHeader">
-            <div className="profileHeaderAvatarWrap" style={{ width: "80px", height: "80px", borderRadius: "50%", background: "#eef2f8", display: "grid", placeItems: "center", border: "1px solid #d7e4f5" }}>
-                <User size={40} color="#2f6fb2" />
+            <div className="profileHeaderAvatarWrap" style={{ width: "80px", height: "80px", borderRadius: "50%", overflow: "hidden", border: "3px solid var(--brand-blue)", flexShrink: 0 }}>
+                {profilePhoto
+                  ? <img src={profilePhoto} alt="Foto de perfil" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <div style={{ width: "100%", height: "100%", background: "#eef2f8", display: "grid", placeItems: "center" }}><User size={40} color="#2f6fb2" /></div>
+                }
             </div>
             <div className="profileHeaderInfo">
               <h2>{userData.name}</h2>
