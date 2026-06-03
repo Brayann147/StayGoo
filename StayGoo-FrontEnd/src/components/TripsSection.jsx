@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, ShieldCheck, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShieldCheck, Star, MapPin } from "lucide-react";
 import { useAuthUser } from "../useAuthUser";
 import { getMyBookings, createReview, cancelBooking } from "../api";
 import Swal from "sweetalert2";
