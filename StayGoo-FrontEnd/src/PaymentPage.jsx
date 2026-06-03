@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import StripeCheckout from './components/StripeCheckout';
+import { API_BASE_URL } from './api';
 
 export default function PaymentPage() {
   const [searchParams] = useSearchParams();
@@ -21,19 +22,18 @@ export default function PaymentPage() {
     try {
       const parsed = JSON.parse(decodeURIComponent(rawData));
       setPaymentData(parsed);
-      
-      // Llamamos al backend para iniciar el proceso de Stripe
+
       const createIntent = async () => {
         try {
-          const res = await fetch('http://localhost:3000/api/payments/create-intent', { // Ajustar la URL del backend según corresponda
+          const res = await fetch(`${API_BASE_URL}/payments/create-intent`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${window.localStorage.getItem('staygooToken') || ''}` // Si usas tokens para Auth
+              'Authorization': `Bearer ${window.localStorage.getItem('staygooToken') || ''}`
             },
             body: JSON.stringify({
-              amount: parsed.total * 100, // Stripe expects the lowest currency division (e.g., cents)
-              currency: 'usd' // Puedes cambiar la divisa si lo requieres
+              amount: Math.round(parsed.total * 100), // Stripe expects cents
+              currency: 'usd'
             })
           });
 
@@ -60,8 +60,6 @@ export default function PaymentPage() {
   }, [searchParams]);
 
   const handleSuccess = (paymentIntent) => {
-    alert('¡Pago completado exitosamente!');
-    // Aquí puedes registrar el pago en ti backend en `/api/payments` y crear la reserva en `/api/bookings`
     navigate('/member-dashboard');
   };
 
@@ -91,7 +89,7 @@ export default function PaymentPage() {
           </ul>
           
           <h2 style={{ borderTop: '1px solid #ddd', paddingTop: '10px', marginTop: '10px' }}>
-            Total: ${paymentData.total.toLocaleString()}
+            Total: ${paymentData.total?.toLocaleString()}
           </h2>
         </div>
 
