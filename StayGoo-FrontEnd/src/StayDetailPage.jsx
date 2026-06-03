@@ -70,6 +70,16 @@ const addDays = (date, days) => {
   return next;
 };
 
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return null;
+  const parts = String(dateStr).split('T')[0].split('-');
+  if (parts.length !== 3) return new Date(dateStr);
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  return new Date(year, month, day);
+};
+
 const toIsoDate = (date) => {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
   return date.toISOString().split("T")[0];
@@ -269,6 +279,12 @@ function StayDetailPage() {
     ? (reviews.reduce((acc, r) => acc + (r.rating || 0), 0) / reviews.length).toFixed(1)
     : null;
 
+  const clearTime = (date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
   const defaultCheckIn = useMemo(() => new Date(), []);
   const defaultCheckOut = useMemo(() => addDays(defaultCheckIn, 5), [defaultCheckIn]);
   const [guestCount, setGuestCount] = useState(Math.min(maxGuestsNumber, 2));
@@ -286,8 +302,9 @@ function StayDetailPage() {
         if (!Array.isArray(bookings)) return;
         const dates = [];
         bookings.forEach(b => {
-          const start = new Date(b.start_date);
-          const end = new Date(b.end_date);
+          const start = parseLocalDate(b.start_date);
+          const end = parseLocalDate(b.end_date);
+          if (!start || !end) return;
           // Generar cada día individual dentro del rango reservado
           const cur = new Date(start);
           while (cur < end) {
@@ -299,6 +316,17 @@ function StayDetailPage() {
       })
       .catch(() => {});
   }, [stay?.id_housing, stay?.realId, stay?.id]);
+
+  const maxCheckOutDate = useMemo(() => {
+    if (!checkInDate) return undefined;
+    const checkInTime = clearTime(checkInDate).getTime();
+    // Encontrar la primera fecha excluida posterior a check-in
+    const nextBlocked = excludedDates
+      .map(d => clearTime(d))
+      .filter(d => d.getTime() > checkInTime)
+      .sort((a, b) => a.getTime() - b.getTime())[0];
+    return nextBlocked || undefined;
+  }, [checkInDate, excludedDates]);
 
   useEffect(() => {
     if (checkOutDate <= checkInDate) setCheckOutDate(addDays(checkInDate, 1));
@@ -320,11 +348,10 @@ function StayDetailPage() {
     }
     // Verificar que las fechas seleccionadas no estén bloqueadas
     const hasConflict = excludedDates.some(blocked => {
-      const b = new Date(blocked);
-      b.setHours(0, 0, 0, 0);
-      const inD = new Date(checkInDate); inD.setHours(0, 0, 0, 0);
-      const outD = new Date(checkOutDate); outD.setHours(0, 0, 0, 0);
-      return b >= inD && b < outD;
+      const bTime = clearTime(blocked).getTime();
+      const inTime = clearTime(checkInDate).getTime();
+      const outTime = clearTime(checkOutDate).getTime();
+      return bTime >= inTime && bTime < outTime;
     });
     if (hasConflict) {
       import('sweetalert2').then(({ default: Swal }) =>
@@ -612,7 +639,7 @@ function StayDetailPage() {
                     selected={checkInDate}
                     onChange={(date) => { if (date) { setCheckInDate(date); if (checkOutDate <= date) setCheckOutDate(addDays(date, 1)); } }}
                     selectsStart startDate={checkInDate} endDate={checkOutDate}
-                    minDate={new Date()} maxDate={checkOutDate || undefined}
+                    minDate={new Date()}
                     excludeDates={excludedDates}
                     locale="es" dateFormat="dd/MM/yyyy"
                     className="stayDetailBookingDateInput"
@@ -628,6 +655,7 @@ function StayDetailPage() {
                     onChange={(date) => { if (date) setCheckOutDate(date); }}
                     selectsEnd startDate={checkInDate} endDate={checkOutDate}
                     minDate={checkInDate ? addDays(checkInDate, 1) : addDays(new Date(), 1)}
+                    maxDate={maxCheckOutDate}
                     excludeDates={excludedDates}
                     locale="es" dateFormat="dd/MM/yyyy"
                     className="stayDetailBookingDateInput"

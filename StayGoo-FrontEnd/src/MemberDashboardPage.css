@@ -2169,3 +2169,170 @@
 .reservationCard .verDetallesBtn:hover {
   background: rgba(111,150,213,0.1);
 }
+
+/* All Trips List styling */
+.tripsSectionWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 8px;
+  gap: 24px;
+}
+
+/* Custom scrollbar for premium aesthetics */
+.tripsSectionWrapper::-webkit-scrollbar {
+  width: 6px;
+}
+.tripsSectionWrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tripsSectionWrapper::-webkit-scrollbar-thumb {
+  background: rgba(111, 150, 213, 0.25);
+  border-radius: 99px;
+}
+.tripsSectionWrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(111, 150, 213, 0.45);
+}
+
+.allTripsSection {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 40px;
+}
+
+.tripsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.tripCard {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 12px rgba(27, 44, 72, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tripCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(27, 44, 72, 0.1);
+}
+
+.tripCardImageWrap {
+  height: 160px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tripCardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tripStatusBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.tripCardBody {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tripCardBody h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+
+.tripCardBody p {
+  margin: 0;
+}
+
+.tripCardLocation {
+  font-size: 13px;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tripCardDates {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tripCardPrice {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--brand-coral-deep);
+  margin-top: auto !important;
+}
+
+.tripCardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(111, 150, 213, 0.1);
+}
+
+.tripCancelBtn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #ef4444;
+  background: transparent;
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tripCancelBtn:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.tripReviewBtn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--brand-blue-deep);
+  background: var(--brand-blue-deep);
+  color: white;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tripReviewBtn:hover {
+  background: #3b5c92;
+}
+

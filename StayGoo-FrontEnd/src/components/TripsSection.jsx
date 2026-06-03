@@ -1,8 +1,19 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, ShieldCheck, Star } from "lucide-react";
 import { useAuthUser } from "../useAuthUser";
-import { getMyBookings, createReview } from "../api";
+import { getMyBookings, createReview, cancelBooking } from "../api";
 import Swal from "sweetalert2";
+
+// Helper helper to parse dates in local timezone to avoid offset shifts
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  const parts = String(dateStr).split('T')[0].split('-');
+  if (parts.length !== 3) return new Date(dateStr);
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  return new Date(year, month, day);
+};
 
 export function TripsSection() {
   const user = useAuthUser();
@@ -10,32 +21,38 @@ export function TripsSection() {
   const [isImageFading, setIsImageFading] = useState(false);
   const [myBookings, setMyBookings] = useState([]);
 
-  useEffect(() => {
-    async function loadBookings() {
-      try {
-        const data = await getMyBookings();
-        if (data && Array.isArray(data)) {
-            setMyBookings(data);
-        }
-      } catch (error) {
-        console.error("Error al cargar mis reservas de viaje:", error);
+  async function loadBookings() {
+    try {
+      const data = await getMyBookings();
+      if (data && Array.isArray(data)) {
+          setMyBookings(data);
       }
+    } catch (error) {
+      console.error("Error al cargar mis reservas de viaje:", error);
     }
+  }
+
+  useEffect(() => {
     loadBookings();
   }, []);
 
   const programmedReservations = myBookings.length > 0 ? myBookings.map(b => {
-    const start = b.start_date ? new Date(b.start_date) : new Date();
-    const end = b.end_date ? new Date(b.end_date) : new Date();
+    const start = b.start_date ? parseLocalDate(b.start_date) : new Date();
+    const end = b.end_date ? parseLocalDate(b.end_date) : new Date();
     
     let startStr = "TBD";
     let endStr = "TBD";
     try {
-        startStr = start.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
-        endStr = end.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+        startStr = start.toLocaleDateString("es-ES", { month: "short", day: "2-digit" });
+        endStr = end.toLocaleDateString("es-ES", { month: "short", day: "2-digit", year: "numeric" });
     } catch(e){}
     
-    let diffDays = Math.ceil((start - new Date()) / (1000 * 60 * 60 * 24));
+    // Clear time for today and start for countdown
+    const todayClear = new Date();
+    todayClear.setHours(0, 0, 0, 0);
+    const startClear = new Date(start);
+    startClear.setHours(0, 0, 0, 0);
+    let diffDays = Math.ceil((startClear - todayClear) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) diffDays = 0;
 
     // Obtener imagen real del alojamiento (la primera no-panorama)
@@ -70,7 +87,6 @@ export function TripsSection() {
     }
   ];
 
-
   const hasCarousel = programmedReservations.length > 1;
   const currentReservation = programmedReservations[activeReservation] || programmedReservations[0];
 
@@ -98,6 +114,30 @@ export function TripsSection() {
 
   const goToNext = () => {
     changeReservation((prev) => (prev + 1) % programmedReservations.length);
+  };
+
+  const handleCancelTrip = async (id_booking) => {
+    const { value: confirm } = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: '¿Quieres cancelar esta reserva? Esta acción no se puede deshacer y liberará las fechas en el calendario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, cancelar',
+      cancelButtonText: 'No, mantener',
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#4f75b0',
+    });
+
+    if (confirm) {
+      try {
+        await cancelBooking(id_booking);
+        Swal.fire('Reserva Cancelada', 'La reserva ha sido cancelada con éxito.', 'success');
+        await loadBookings();
+      } catch (err) {
+        console.error("Error al cancelar la reserva:", err);
+        Swal.fire('Error', err.message || 'No se pudo cancelar la reserva.', 'error');
+      }
+    }
   };
 
   const handleWriteReview = async (res) => {
@@ -156,7 +196,7 @@ export function TripsSection() {
   const displayName = (typeof user?.name === "string" && !user.name.includes("undefined")) ? user.name : "Viajero";
 
   return (
-    <>
+    <div className="tripsSectionWrapper">
       <header className="memberWelcome">
         <h1>
           Bienvenido de nuevo, <span>{displayName}</span>
@@ -279,6 +319,104 @@ export function TripsSection() {
           </div>
         </article>
       </section>
-    </>
+
+      {/* Listado Completo de Viajes del Usuario */}
+      <section className="allTripsSection">
+        <header className="sectionHeader">
+          <div>
+            <h2>Todos mis viajes</h2>
+            <p>Historial completo de tus experiencias reservadas</p>
+          </div>
+        </header>
+
+        {myBookings.length === 0 ? (
+          <div className="emptyFavoritesState" style={{ background: '#fff', borderRadius: '16px', border: '1px solid var(--line)' }}>
+            <MapPin size={48} strokeWidth={1.5} style={{ color: 'var(--brand-coral)', marginBottom: '16px', opacity: 0.6 }} />
+            <h3>No tienes viajes planeados aún</h3>
+            <p>Explora y encuentra el alojamiento perfecto para tu próxima aventura.</p>
+          </div>
+        ) : (
+          <div className="tripsGrid">
+            {myBookings.map((b) => {
+              const start = b.start_date ? parseLocalDate(b.start_date) : new Date();
+              const end = b.end_date ? parseLocalDate(b.end_date) : new Date();
+              
+              let dateStr = "TBD";
+              try {
+                const startStr = start.toLocaleDateString("es-ES", { month: "short", day: "2-digit" });
+                const endStr = end.toLocaleDateString("es-ES", { month: "short", day: "2-digit", year: "numeric" });
+                dateStr = `${startStr} - ${endStr}`;
+              } catch(e){}
+
+              // Obtener imagen real
+              const images = b.housing?.housing_images || [];
+              const normalImages = images.filter(img => !img.is_panorama);
+              const coverImage = normalImages.length > 0
+                ? normalImages[0].image_url
+                : "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1400&q=80";
+
+              const locationStr = [b.housing?.municipality, b.housing?.department, b.housing?.country]
+                .filter(Boolean).join(', ') || b.housing?.address || "Alojamiento";
+
+              const isCancellable = b.status === 'confirmed' || b.status === 'pending';
+
+              return (
+                <article key={b.id_booking} className="tripCard">
+                  <div className="tripCardImageWrap">
+                    <img src={coverImage} alt={b.housing?.name} className="tripCardImage" />
+                    <span className="tripStatusBadge" style={{
+                      background:
+                        b.status === 'confirmed' ? 'rgba(34,197,94,0.9)' :
+                        b.status === 'completed' ? 'rgba(99,102,241,0.9)' :
+                        b.status === 'pending'   ? 'rgba(234,179,8,0.9)' :
+                                                   'rgba(239,68,68,0.9)'
+                    }}>
+                      {b.status === 'confirmed' ? '✅ Confirmada' :
+                       b.status === 'completed' ? '✔️ Completada' :
+                       b.status === 'pending'   ? '⏳ Pendiente' :
+                                                  '❌ Cancelada'}
+                    </span>
+                  </div>
+
+                  <div className="tripCardBody">
+                    <h3>{b.housing?.name || "Alojamiento"}</h3>
+                    <p className="tripCardLocation">
+                      📍 {locationStr}
+                    </p>
+                    <p className="tripCardDates">
+                      📅 {dateStr}
+                    </p>
+                    <p className="tripCardPrice">
+                      Total: ${Number(b.total_price || 0).toLocaleString()}
+                    </p>
+
+                    <div className="tripCardActions">
+                      {isCancellable && (
+                        <button
+                          type="button"
+                          className="tripCancelBtn"
+                          onClick={() => handleCancelTrip(b.id_booking)}
+                        >
+                          Cancelar reserva
+                        </button>
+                      )}
+                      {b.status !== 'cancelled' && (
+                        <button
+                          type="button"
+                          className="tripReviewBtn"
+                          onClick={() => handleWriteReview({ id: b.id_booking })}
+                        >
+                          Escribir reseña
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
