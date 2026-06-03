@@ -1,3 +1,4 @@
+// StayGoo Backend — v4 (fix: booking service uses municipality column, adds housing_images to trips query)
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
