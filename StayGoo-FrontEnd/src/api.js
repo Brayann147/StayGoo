@@ -108,8 +108,10 @@ export async function logoutUser() {
  */
 export async function getMyProfile() {
   const data = await request('/users/me');
-  // Sincroniza el avatar al localStorage cada vez que se carga el perfil
-  if (data?.avatar) localStorage.setItem('staygooProfilePhoto', data.avatar);
+  if (data?.avatar) {
+    localStorage.setItem('staygooProfilePhoto', data.avatar);
+    localStorage.setItem('staygooUserPhoto', data.avatar);
+  }
   return data;
 }
 

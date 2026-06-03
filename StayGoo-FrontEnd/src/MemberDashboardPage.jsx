@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Heart,
@@ -12,6 +12,7 @@ import { FavoritesSection } from "./components/FavoritesSection";
 import { MessagesSection } from "./components/MessagesSection";
 import { ProfileSection } from "./components/ProfileSection";
 import { SettingsSection } from "./components/SettingsSection";
+import { getMyProfile } from "./api";
 import "./MemberDashboardPage.css";
 
 const DEFAULT_PROFILE_PHOTO = null;
@@ -31,11 +32,26 @@ function MemberDashboardPage() {
   const [pendingLeaveAction, setPendingLeaveAction] = useState(null);
   const [profilePhoto, setProfilePhoto] = useState(() => {
     try {
-      return window.localStorage.getItem("staygooUserPhoto") || DEFAULT_PROFILE_PHOTO;
+      // Check both keys for compatibility
+      return window.localStorage.getItem("staygooUserPhoto")
+          || window.localStorage.getItem("staygooProfilePhoto")
+          || null;
     } catch {
-      return DEFAULT_PROFILE_PHOTO;
+      return null;
     }
   });
+
+  // Load avatar from API on mount
+  useEffect(() => {
+    getMyProfile()
+      .then(profile => {
+        if (profile?.avatar) {
+          window.localStorage.setItem("staygooUserPhoto", profile.avatar);
+          setProfilePhoto(profile.avatar);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const goBackHome = () => {
     if (activeSection === "settings" && settingsDirty) {
@@ -99,11 +115,10 @@ function MemberDashboardPage() {
     <div className="memberDashboardPage">
       <aside className="memberSidebar">
         <div className="memberProfileWrap">
-          <img
-            className="memberProfileAvatar"
-            src={profilePhoto}
-            alt="Foto de perfil"
-          />
+          {profilePhoto
+            ? <img className="memberProfileAvatar" src={profilePhoto} alt="Foto de perfil" />
+            : <div className="memberProfileAvatar" style={{ display: 'grid', placeItems: 'center', background: '#eef2f8', border: '3px solid #d7e4f5' }}><User size={32} color="#2f6fb2" /></div>
+          }
         </div>
 
         <nav className="memberNav">
