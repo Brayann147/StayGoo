@@ -61,30 +61,39 @@ export default function PaymentPage() {
 
   const handleSuccess = async () => {
     try {
-      // Extraer el id_housing limpio del objeto de alojamiento
+      // Extraer el id_housing limpio (numérico)
       const stayObj = paymentData?.data || {};
-      const rawId = stayObj.id_housing || stayObj.realId || stayObj.id || '';
-      const id_housing = typeof rawId === 'string'
-        ? parseInt(rawId.replace('lst-', ''), 10)
-        : parseInt(rawId, 10);
+      const rawId = stayObj.id_housing ?? stayObj.realId ?? stayObj.id ?? '';
+      const id_housing = Number(String(rawId).replace('lst-', ''));
 
       if (!id_housing || isNaN(id_housing)) {
-        console.error('id_housing no válido:', rawId);
-      } else {
-        await createBooking({
-          id_housing,
-          start_date: paymentData.checkIn,
-          end_date: paymentData.checkOut,
-          total_price: paymentData.total,
-          guests: paymentData.guests,
-          status: 'confirmed',
-        });
+        throw new Error(`id_housing inválido: "${rawId}"`);
       }
-    } catch (err) {
-      // No bloqueamos la navegación si la reserva falla — el usuario ya pagó
-      console.error('Error al registrar la reserva:', err);
-    } finally {
+
+      // Campos que SÍ existen en la tabla booking
+      await createBooking({
+        id_housing,
+        start_date: paymentData.checkIn,
+        end_date:   paymentData.checkOut,
+        total_price: paymentData.total,
+        status: 'confirmed',
+      });
+
+      // Redirigir al perfil con la reserva ya creada
       navigate('/member-dashboard', { state: { initialSection: 'profile' } });
+
+    } catch (err) {
+      console.error('Error al registrar la reserva:', err);
+      // Mostrar el error al usuario para poder diagnosticarlo
+      const { default: Swal } = await import('sweetalert2');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Pago exitoso, pero...',
+        text: `Tu pago fue procesado correctamente, pero hubo un error al registrar la reserva: ${err.message}. Contacta soporte.`,
+        confirmButtonText: 'Ir a mi perfil',
+      }).then(() => {
+        navigate('/member-dashboard', { state: { initialSection: 'profile' } });
+      });
     }
   };
 
