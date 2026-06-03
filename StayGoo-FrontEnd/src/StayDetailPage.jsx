@@ -6,13 +6,14 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./StayDetailPage.css";
 import PanoramaViewer from "./PanoramaViewer";
 import { MapPicker } from "./components/MapPicker";
-import { getHousingById, getReviewsByHousing, createReview } from "./api";
+import { getHousingById, getReviewsByHousing, createReview, getMyBookings } from "./api";
 import {
   isFavorite as isListingFavorite,
   toggleFavoriteId,
   FAVORITES_CHANGED_EVENT,
 } from "./utils/favoritesStorage";
 import { formatCurrencyPrice } from "./utils/listingMapper";
+import { getGenderedAvatar } from "./utils/avatarHelper";
 
 registerLocale("es", es);
 
@@ -117,10 +118,13 @@ function StayDetailPage() {
     if (stayData) setStay(stayData);
   }, [stayData]);
 
+  const [userBookingId, setUserBookingId] = useState(null);
+
   useEffect(() => {
     const fetchLatestDetails = async () => {
-      const id = stayData?.realId || stayData?.id;
-      if (!id) return;
+      const rawId = stayData?.realId || stayData?.id;
+      if (!rawId) return;
+      const id = typeof rawId === "string" ? rawId.replace("lst-", "") : rawId;
       try {
         const latest = await getHousingById(id);
         if (latest) {
@@ -148,14 +152,36 @@ function StayDetailPage() {
   }, [stayData]);
 
   useEffect(() => {
-    const housingId = stay?.id_housing || stay?.realId;
-    if (!housingId) return;
+    const rawHousingId = stay?.id_housing || stay?.realId || stay?.id;
+    if (!rawHousingId) return;
+    const housingId = typeof rawHousingId === "string" ? rawHousingId.replace("lst-", "") : rawHousingId;
     setReviewsLoading(true);
     getReviewsByHousing(housingId)
       .then(data => setReviews(Array.isArray(data) ? data : []))
       .catch(() => setReviews([]))
       .finally(() => setReviewsLoading(false));
-  }, [stay?.id_housing, stay?.realId]);
+  }, [stay?.id_housing, stay?.realId, stay?.id]);
+
+  useEffect(() => {
+    const checkUserBooking = async () => {
+      const token = localStorage.getItem("staygooToken");
+      const rawHousingId = stay?.id_housing || stay?.realId || stay?.id;
+      if (!token || !rawHousingId) return;
+      try {
+        const cleanHousingId = parseInt(typeof rawHousingId === "string" ? rawHousingId.replace("lst-", "") : rawHousingId);
+        const bookings = await getMyBookings();
+        if (Array.isArray(bookings)) {
+          const match = bookings.find(b => parseInt(b.id_housing) === cleanHousingId);
+          if (match) {
+            setUserBookingId(match.id_booking);
+          }
+        }
+      } catch (err) {
+        console.error("Error checking user booking:", err);
+      }
+    };
+    checkUserBooking();
+  }, [stay]);
 
   useEffect(() => {
     const listingId = (stay.realId || stay.id)?.toString();
@@ -192,6 +218,10 @@ function StayDetailPage() {
       setReviewError("Debes iniciar sesión para dejar una reseña.");
       return;
     }
+    if (!userBookingId) {
+      setReviewError("Debes tener una reserva en este alojamiento para poder escribir una reseña.");
+      return;
+    }
     try {
       setSubmittingReview(true);
       setReviewError("");
@@ -202,7 +232,9 @@ function StayDetailPage() {
       });
       setReviewSuccess(true);
       setNewReview({ rating: 5, comment: "" });
-      const updated = await getReviewsByHousing(stay?.id_housing || stay?.realId);
+      const rawHousingId = stay?.id_housing || stay?.realId || stay?.id;
+      const housingId = typeof rawHousingId === "string" ? rawHousingId.replace("lst-", "") : rawHousingId;
+      const updated = await getReviewsByHousing(housingId);
       setReviews(Array.isArray(updated) ? updated : []);
     } catch (err) {
       setReviewError(err.message || "Error al enviar la reseña.");
@@ -230,7 +262,7 @@ function StayDetailPage() {
   );
   const hostAvatar = clean(
     (Array.isArray(stay.host) ? stay.host[0]?.avatar : stay.host?.avatar) || stay.hostAvatar,
-    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"
+    getGenderedAvatar(hostName)
   );
   const isSuperHost = stay.isSuperHost ?? true;
   const avgRating = reviews.length > 0
@@ -354,7 +386,7 @@ function StayDetailPage() {
                   <h2>Villa completa, anfitrión: {hostName}</h2>
                   <p>{maxGuests} huespedes <span className="stayDetailDotSep" /> 4 dormitorios <span className="stayDetailDotSep" /> 5 camas <span className="stayDetailDotSep" /> 4.5 baños</p>
                 </div>
-                <img className="stayDetailHostBadge" src={stay.hostAvatar || localStorage.getItem('staygooProfilePhoto') || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"} alt="Perfil del anfitrion" />
+                <img className="stayDetailHostBadge" src={hostAvatar} alt="Perfil del anfitrion" />
               </div>
             </article>
 

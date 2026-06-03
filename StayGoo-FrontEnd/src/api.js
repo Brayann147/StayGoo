@@ -205,6 +205,16 @@ export async function updateHousing(id, housingData) {
   });
 }
 
+/**
+ * Eliminar un alojamiento (solo hosts)
+ * @param {string|number} id
+ */
+export async function deleteHousing(id) {
+  return request(`/housings/${id}`, {
+    method: "DELETE",
+  });
+}
+
 // ── BOOKINGS ───────────────────────────────────────────────────────────────────
 
 /**

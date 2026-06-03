@@ -158,7 +158,7 @@
   display: grid;
   grid-template-rows: auto auto 1fr;
   gap: 22px;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .hostMainFixedPane {
@@ -2874,3 +2874,197 @@
     display: none;
   }
 }
+
+/* --- Rediseño de Alojamientos (Tab) --- */
+.hostListingsHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.hostAddPropertyBtnHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--host-blue);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 4px 10px rgba(74, 129, 191, 0.2);
+}
+
+.hostAddPropertyBtnHeader:hover {
+  background-color: #3b6da4;
+  transform: translateY(-1px);
+}
+
+.hostAddPropertyBtnHeader:active {
+  transform: translateY(0);
+}
+
+/* Grilla de opciones de gestión de alojamiento */
+.hostRegisteredOptionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.hostOptionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #d7e3f4;
+  background-color: #f7fbff;
+  color: #213252;
+  font-family: inherit;
+}
+
+/* Edit / Default hover */
+.hostOptionBtn.edit:hover {
+  background-color: #e6f0ff;
+  border-color: #2f6fb2;
+  color: #2f6fb2;
+}
+
+/* Status toggler options */
+.hostOptionBtn.status.enable {
+  background-color: #e6fcf5;
+  border-color: #c3fae8;
+  color: #0ca678;
+}
+.hostOptionBtn.status.enable:hover {
+  background-color: #c3fae8;
+  color: #0b7285;
+}
+.hostOptionBtn.status.disable {
+  background-color: #fff5f5;
+  border-color: #ffe3e3;
+  color: #fa5252;
+}
+.hostOptionBtn.status.disable:hover {
+  background-color: #ffe3e3;
+  color: #e03131;
+}
+
+/* Preview option */
+.hostOptionBtn.preview:hover {
+  background-color: #fff9db;
+  border-color: #fab005;
+  color: #f59f00;
+}
+
+/* Delete option */
+.hostOptionBtn.delete {
+  background-color: #fff5f5;
+  border-color: #ffe3e3;
+  color: #fa5252;
+}
+.hostOptionBtn.delete:hover {
+  background-color: var(--host-red);
+  border-color: var(--host-red);
+  color: #fff;
+}
+
+/* Acordeón de reseñas */
+.hostReviewsAccordion {
+  margin-top: 16px;
+  border-top: 1px dashed #d7e3f4;
+  padding-top: 12px;
+}
+
+.hostReviewsToggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #637590;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.2s ease;
+}
+
+.hostReviewsToggleBtn:hover {
+  color: var(--host-blue);
+}
+
+.hostReviewsList {
+  margin-top: 10px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+/* Scrollbar for reviews list */
+.hostReviewsList::-webkit-scrollbar {
+  width: 4px;
+}
+.hostReviewsList::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.hostReviewsList::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.hostReviewItem {
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.hostReviewItemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hostReviewItemTop strong {
+  font-size: 12px;
+  color: #334155;
+}
+
+.hostReviewItemTop span {
+  font-size: 11px;
+  color: #eab308;
+}
+
+.hostReviewItem p {
+  margin: 0;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.hostReviewsEmpty {
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  padding: 12px 0;
+}
+

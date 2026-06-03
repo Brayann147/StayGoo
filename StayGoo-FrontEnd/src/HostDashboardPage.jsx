@@ -40,9 +40,10 @@ import { MessagesSection } from "./components/MessagesSection";
 import EquirectangularUploader from "./components/EquirectangularUploader";
 import { SettingsSection } from "./components/SettingsSection";
 import logoImage from "./assets/logoo.png";
-import { createHousing, getHousings, updateHousing, getHostBookings, getMyProfile, uploadHousingImage, deleteHousingImage, fetchDepartmentsByCountry, fetchCitiesByDepartment } from "./api";
+import { createHousing, getHousings, updateHousing, getHostBookings, getMyProfile, uploadHousingImage, deleteHousingImage, fetchDepartmentsByCountry, fetchCitiesByDepartment, deleteHousing, getReviewsByHousing } from "./api";
 import { useAuthUser } from "./useAuthUser";
 import { MapPicker } from "./components/MapPicker";
+import { getGenderedAvatar } from "./utils/avatarHelper";
 import "./HostDashboardPage.css";
 
 const sidebarItems = [
@@ -79,6 +80,21 @@ const COUNTRIES = [
   { code: "VE", name: "Venezuela" },
 ];
 
+const parseGoogleMapsOrCoords = (input) => {
+  if (!input) return null;
+  const trimmed = input.trim();
+  const genericRegex = /(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/;
+  const match = trimmed.match(genericRegex);
+  if (match) {
+    const lat = parseFloat(match[1]);
+    const lng = parseFloat(match[2]);
+    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat, lng };
+    }
+  }
+  return null;
+};
+
 function HostDashboardPage() {
   const navigate = useNavigate();
   const user = useAuthUser();
@@ -87,6 +103,19 @@ function HostDashboardPage() {
   const [activeItem, setActiveItem] = useState("dashboard");
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [listingAction, setListingAction] = useState(null);
+
+  const [newGmapsInput, setNewGmapsInput] = useState("");
+  const [editGmapsInput, setEditGmapsInput] = useState("");
+
+  const [reviewsByListing, setReviewsByListing] = useState({});
+  const [expandedReviews, setExpandedReviews] = useState({});
+
+  const toggleReviewsExpanded = (listingId) => {
+    setExpandedReviews(prev => ({
+      ...prev,
+      [listingId]: !prev[listingId]
+    }));
+  };
 
   const [editListingForm, setEditListingForm] = useState({
     title: "The Glass Pavilion",
@@ -213,9 +242,8 @@ function HostDashboardPage() {
   const [reservationViewDate, setReservationViewDate] = useState(new Date(2024, 9, 1));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState("2024-10-01");
   const [hostPhoto, setHostPhoto] = useState(
-  localStorage.getItem('staygooProfilePhoto') || 
-  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80"
-);
+    localStorage.getItem('staygooProfilePhoto') || getGenderedAvatar(user?.name || "Juan Esteban")
+  );
   const [selectedMessageGuestName, setSelectedMessageGuestName] = useState(null);
   const [earningsView, setEarningsView] = useState("monthly");
   const [selectedEarningsListing, setSelectedEarningsListing] = useState(null);
@@ -227,6 +255,25 @@ function HostDashboardPage() {
   });
   const [supportStatus, setSupportStatus] = useState("idle");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleGmapsLinkChange = (mode, value) => {
+    if (mode === "new") {
+      setNewGmapsInput(value);
+      const parsed = parseGoogleMapsOrCoords(value);
+      if (parsed) {
+        updateNewField("latitude", parsed.lat.toString());
+        updateNewField("longitude", parsed.lng.toString());
+      }
+    } else {
+      setEditGmapsInput(value);
+      const parsed = parseGoogleMapsOrCoords(value);
+      if (parsed) {
+        updateEditField("latitude", parsed.lat.toString());
+        updateEditField("longitude", parsed.lng.toString());
+      }
+    }
+  };
+
   const [reservations, setReservations] = useState([]);
   const [transactionsData, setTransactionsData] = useState([]);
   const [earningsData, setEarningsData] = useState({
@@ -402,20 +449,115 @@ function HostDashboardPage() {
     try {
       setIsProcessing(true);
       const userProfile = await getMyProfile();
-      console.log("perfil completo:", userProfile);
-      console.log("avatar:", userProfile?.avatar);
       const userId = userProfile?.id_user;
+      const hostAvatar = userProfile?.avatar || localStorage.getItem('staygooProfilePhoto') || getGenderedAvatar(userProfile?.name || "Juan Esteban");
+      if (userProfile?.avatar) localStorage.setItem('staygooProfilePhoto', userProfile.avatar);
 
-      const hostAvatar = userProfile?.avatar || localStorage.getItem('staygooProfilePhoto') || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=180&q=80";
-    if (userProfile?.avatar) localStorage.setItem('staygooProfilePhoto', userProfile.avatar);
+      const [housingsData, bookingsData] = await Promise.all([
+        getHousings(),
+        getHostBookings().catch(() => [])
+      ]);
 
-      const data = await getHousings();
+      let bookingCounts = {};
+      let dynamicReservations = [];
+      let dynamicTransactions = [];
+      let totalEarnings = 0;
 
-      if (data && Array.isArray(data)) {
-        const hostHousings = data.filter(item =>
+      if (bookingsData && Array.isArray(bookingsData)) {
+        setHostBookings(bookingsData);
+        bookingsData.forEach(b => {
+          if (b.id_housing) {
+            bookingCounts[b.id_housing] = (bookingCounts[b.id_housing] || 0) + 1;
+          }
+        });
+
+        // Build Reservations
+        dynamicReservations = bookingsData.map(b => {
+          const start = b.start_date ? new Date(b.start_date) : new Date();
+          const end = b.end_date ? new Date(b.end_date) : new Date();
+          const startStr = start.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+          const endStr = end.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+
+          return {
+            id: b.id_booking,
+            guest: b.user?.name || "Huésped",
+            dates: `${startStr} - ${endStr}`,
+            listing: b.housing?.name || "Alojamiento",
+            status: b.status === "confirmed" ? "confirmed" : "pending",
+            avatar: getGenderedAvatar(b.user?.name)
+          };
+        });
+
+        // Build Transactions
+        dynamicTransactions = bookingsData.map(b => {
+          const start = b.start_date ? new Date(b.start_date) : new Date();
+          const end = b.end_date ? new Date(b.end_date) : new Date();
+          const startStr = start.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+          const endStr = end.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+          const nights = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+
+          return {
+            id: `txn-${b.id_booking}`,
+            listingId: `lst-${b.id_housing}`,
+            guest: b.user?.name || "Huésped",
+            guestAvatar: getGenderedAvatar(b.user?.name),
+            bookingId: `BK-${b.id_booking}`,
+            dateRange: `${startStr} - ${endStr}`,
+            nights,
+            listingName: b.housing?.name || "Alojamiento",
+            listingType: "Alojamiento",
+            earnings: `$${Number(b.total_price || 0).toLocaleString()}`,
+            status: b.status === "confirmed" ? "PAID" : "PENDING"
+          };
+        });
+
+        totalEarnings = bookingsData.reduce((acc, b) => acc + Number(b.total_price || 0), 0);
+      }
+
+      setReservations(dynamicReservations);
+      setTransactionsData(dynamicTransactions);
+      setEarningsData({
+        monthly: {
+          totalAmount: `$${totalEarnings.toLocaleString()}`,
+          change: "↗ +0% this month",
+          chartBars: [10, 20, 30, 40, 50, 60, 70, 80],
+          chartLabels: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG"],
+          activeBarIndex: 6,
+          nextPayout: "-",
+          nextPayoutDate: "No data",
+          payoutProgress: 50,
+        },
+        yearly: {
+          totalAmount: `$${totalEarnings.toLocaleString()}`,
+          change: "↗ +0% this year",
+          chartBars: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120],
+          chartLabels: ["2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024"],
+          activeBarIndex: 11,
+          nextPayout: "-",
+          nextPayoutDate: "No data",
+          payoutProgress: 50,
+        }
+      });
+
+      if (housingsData && Array.isArray(housingsData)) {
+        const hostHousings = housingsData.filter(item =>
           item.id_owner === userId ||
           (item.host && item.host.id_user === userId)
         );
+
+        // Fetch reviews in parallel
+        const reviewsMap = {};
+        try {
+          const reviewsResults = await Promise.all(
+            hostHousings.map(item => getReviewsByHousing(item.id_housing).catch(() => []))
+          );
+          hostHousings.forEach((item, index) => {
+            reviewsMap[item.id_housing] = reviewsResults[index] || [];
+          });
+          setReviewsByListing(reviewsMap);
+        } catch (revErr) {
+          console.error("Error fetching reviews for host listings:", revErr);
+        }
 
         const mappedListings = hostHousings.map((item) => {
           const images = item.housing_images || [];
@@ -440,6 +582,10 @@ function HostDashboardPage() {
               parsedCityRegion = cityParts[0];
             }
           }
+
+          const listingReviews = reviewsMap[item.id_housing] || [];
+          const totalRating = listingReviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+          const avgRating = listingReviews.length > 0 ? parseFloat((totalRating / listingReviews.length).toFixed(1)) : 5.0;
 
           return {
             id: "lst-" + item.id_housing, // El Dashboard asume formato id como lst-1
@@ -467,14 +613,17 @@ function HostDashboardPage() {
             },
             coverImage: firstImage,
             housing_images: images,
-            hostName: "Mi Alojamiento",
+            hostName: userProfile?.name || "Mi Alojamiento",
             hostAvatar: hostAvatar,
             status: item.status === "available" ? "Publicado" : "Borrador",
-            rating: 4.8,
-            reservations: 0,
+            rawStatus: item.status,
+            rating: avgRating,
+            reservations: bookingCounts[item.id_housing] || 0,
           };
         });
+
         setRegisteredListings(mappedListings);
+
         if (listingAction === "edit" && editListingForm.id) {
           const refreshed = hostHousings.find(h => h.id_housing === editListingForm.id);
           if (refreshed) {
@@ -494,84 +643,8 @@ function HostDashboardPage() {
           }
         }
       }
-
     } catch (err) {
-      console.error("Error fetching housings:", err);
-    }
-    try {
-      const bookingsData = await getHostBookings();
-      if (bookingsData && Array.isArray(bookingsData)) {
-        setHostBookings(bookingsData);
-
-        // Build Reservations
-        const dynamicReservations = bookingsData.map(b => {
-          const start = b.start_date ? new Date(b.start_date) : new Date();
-          const end = b.end_date ? new Date(b.end_date) : new Date();
-          const startStr = start.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
-          const endStr = end.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
-
-          return {
-            id: b.id_booking,
-            guest: b.user?.name || "Huésped",
-            dates: `${startStr} - ${endStr}`,
-            listing: b.housing?.name || "Alojamiento",
-            status: b.status === "confirmed" ? "confirmed" : "pending",
-            avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80"
-          };
-        });
-        setReservations(dynamicReservations);
-
-        // Build Transactions
-        const dynamicTransactions = bookingsData.map(b => {
-          const start = b.start_date ? new Date(b.start_date) : new Date();
-          const end = b.end_date ? new Date(b.end_date) : new Date();
-          const startStr = start.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
-          const endStr = end.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
-          const nights = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-
-          return {
-            id: `txn-${b.id_booking}`,
-            listingId: `lst-${b.id_housing}`,
-            guest: b.user?.name || "Huésped",
-            guestAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",
-            bookingId: `BK-${b.id_booking}`,
-            dateRange: `${startStr} - ${endStr}`,
-            nights,
-            listingName: b.housing?.name || "Alojamiento",
-            listingType: "Alojamiento",
-            earnings: `$${Number(b.total_price || 0).toLocaleString()}`,
-            status: b.status === "confirmed" ? "PAID" : "PENDING"
-          };
-        });
-        setTransactionsData(dynamicTransactions);
-
-        // Build Earnings
-        const totalEarnings = bookingsData.reduce((acc, b) => acc + Number(b.total_price || 0), 0);
-        setEarningsData({
-          monthly: {
-            totalAmount: `$${totalEarnings.toLocaleString()}`,
-            change: "↗ +0% this month",
-            chartBars: [10, 20, 30, 40, 50, 60, 70, 80],
-            chartLabels: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG"],
-            activeBarIndex: 6,
-            nextPayout: "-",
-            nextPayoutDate: "No data",
-            payoutProgress: 50,
-          },
-          yearly: {
-            totalAmount: `$${totalEarnings.toLocaleString()}`,
-            change: "↗ +0% this year",
-            chartBars: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120],
-            chartLabels: ["2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024"],
-            activeBarIndex: 11,
-            nextPayout: "-",
-            nextPayoutDate: "No data",
-            payoutProgress: 50,
-          }
-        });
-      }
-    } catch (err) {
-      console.error("Error al cargar reservas:", err);
+      console.error("Error loading host dashboard data:", err);
     } finally {
       setIsProcessing(false);
     }
@@ -665,7 +738,7 @@ function HostDashboardPage() {
           checkIn: b.start_date,
           checkOut: b.end_date,
           nights: diffDays > 0 ? diffDays : 1,
-          avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80",
+          avatar: getGenderedAvatar(b.user?.name),
           note: null,
           status: b.status === "confirmed" ? "nueva" : "pendiente"
         };
@@ -764,7 +837,82 @@ function HostDashboardPage() {
     setEditListingPhotos(normalImgs);
     setEditListingPanoramaPhotos(panoImgs);
     setDeletedPhotoIds([]);
+    setEditGmapsInput(listing.latitude && listing.longitude ? `${listing.latitude}, ${listing.longitude}` : "");
     setListingAction("edit");
+  };
+
+  const handleToggleListingStatus = async (listing) => {
+    try {
+      setIsProcessing(true);
+      const newStatus = listing.rawStatus === "available" ? "maintenance" : "available";
+      await updateHousing(listing.realId, { status: newStatus });
+      Swal.fire({
+        title: 'Estado actualizado',
+        text: `El alojamiento ahora está en modo ${newStatus === 'available' ? 'Publicado' : 'Borrador'}.`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+      await loadHousings();
+    } catch (err) {
+      console.error("Error al actualizar estado del alojamiento:", err);
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudo actualizar el estado del alojamiento.',
+        icon: 'error'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteListing = async (listing) => {
+    Swal.fire({
+      title: '¿Estás seguro de eliminar este alojamiento?',
+      text: "Esta acción no se puede deshacer. Se eliminarán permanentemente las fotos y datos del alojamiento.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ff5a5f',
+      cancelButtonColor: '#aaa',
+      confirmButtonText: 'Sí, borrar',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          setIsProcessing(true);
+          await deleteHousing(listing.realId);
+          Swal.fire({
+            title: 'Eliminado',
+            text: 'El alojamiento ha sido eliminado con éxito.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+          await loadHousings();
+        } catch (err) {
+          console.error("Error al eliminar alojamiento:", err);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo eliminar el alojamiento.',
+            icon: 'error'
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      }
+    });
+  };
+
+  const handlePreviewListing = (listing) => {
+    const payload = encodeURIComponent(
+      JSON.stringify({
+        ...listing,
+        sectionTitle: "Vista previa del anfitrión"
+      })
+    );
+    const base = import.meta.env.BASE_URL || "/";
+    const detailPath = `${base.replace(/\/$/, "")}/stay-detail?data=${payload}`;
+    window.open(detailPath, "_blank", "noopener,noreferrer");
   };
 
 
@@ -1109,51 +1257,134 @@ function HostDashboardPage() {
   const renderRegisteredListingsView = () => (
     <section className="hostRegisteredListings">
       <header className="hostEditorHeader">
-        <p>Alojamientos · Propiedades Registradas</p>
-        <h1>Elige un alojamiento para editar</h1>
-        <span>Selecciona uno de tus alojamientos con detalles del perfil para continuar.</span>
+        <div className="hostListingsHeaderRow">
+          <div>
+            <p>Alojamientos · Propiedades Registradas</p>
+            <h1>Mis alojamientos</h1>
+            <span>Gestiona tus alojamientos, edita sus datos y visualiza las reseñas de los huéspedes.</span>
+          </div>
+          <button
+            type="button"
+            className="hostAddPropertyBtnHeader"
+            onClick={() => {
+              setNewGmapsInput("");
+              setListingAction("new");
+            }}
+          >
+            <Plus size={16} />
+            Registrar nuevo alojamiento
+          </button>
+        </div>
       </header>
 
       <div className="hostRegisteredGrid">
-        {registeredListings.map((listing) => (
-          <article key={listing.id} className="hostRegisteredCard">
-            <img src={listing.coverImage} alt={listing.title} className="hostRegisteredCover" />
-            <div className="hostRegisteredContent">
-              <div className="hostRegisteredTopRow">
-                <h2>{listing.title}</h2>
-                <span className={`hostRegisteredBadge ${listing.status === "Borrador" ? "isDraft" : ""}`}>{listing.status}</span>
-              </div>
+        {registeredListings.map((listing) => {
+          const reviews = reviewsByListing[listing.realId] || [];
+          const isReviewsExpanded = !!expandedReviews[listing.realId];
 
-              <p className="hostRegisteredLocation">
-                <MapPin size={14} />
-                {listing.cityRegion}{listing.country ? `, ${listing.country}` : ''}
-              </p>
-
-              <div className="hostRegisteredMeta">
-                <span>
-                  <Star size={14} /> {listing.rating}
-                </span>
-                <span>{listing.reservations} reservas</span>
-              </div>
-
-              <div className="hostRegisteredProfile">
-                <img src={listing.hostAvatar} alt={listing.hostName} />
-                <div>
-                  <strong>{listing.hostName}</strong>
-                  <small>Perfil del anfitrión</small>
+          return (
+            <article key={listing.id} className="hostRegisteredCard">
+              <img src={listing.coverImage} alt={listing.title} className="hostRegisteredCover" />
+              <div className="hostRegisteredContent">
+                <div className="hostRegisteredTopRow">
+                  <h2>{listing.title}</h2>
+                  <span className={`hostRegisteredBadge ${listing.rawStatus !== "available" ? "isDraft" : ""}`}>
+                    {listing.rawStatus === "available" ? "Publicado" : "Borrador"}
+                  </span>
                 </div>
-              </div>
 
-              <button
-                type="button"
-                className="hostListingPrimaryBtn"
-                onClick={() => handleSelectRegisteredListing(listing)}
-              >
-                Editar este alojamiento
-              </button>
-            </div>
-          </article>
-        ))}
+                <p className="hostRegisteredLocation">
+                  <MapPin size={14} />
+                  {listing.cityRegion}{listing.country ? `, ${listing.country}` : ''}
+                </p>
+
+                <div className="hostRegisteredMeta">
+                  <span>
+                    <Star size={14} /> {listing.rating} ({reviews.length} {reviews.length === 1 ? 'reseña' : 'reseñas'})
+                  </span>
+                  <span>{listing.reservations} {listing.reservations === 1 ? 'reserva' : 'reservas'}</span>
+                </div>
+
+                <div className="hostRegisteredProfile">
+                  <img src={listing.hostAvatar} alt={listing.hostName} />
+                  <div>
+                    <strong>{listing.hostName}</strong>
+                    <small>Anfitrión</small>
+                  </div>
+                </div>
+
+                {/* Grilla de opciones de gestión de alojamiento */}
+                <div className="hostRegisteredOptionsGrid">
+                  <button
+                    type="button"
+                    className="hostOptionBtn edit"
+                    onClick={() => handleSelectRegisteredListing(listing)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className={`hostOptionBtn status ${listing.rawStatus === "available" ? "disable" : "enable"}`}
+                    onClick={() => handleToggleListingStatus(listing)}
+                  >
+                    {listing.rawStatus === "available" ? "Deshabilitar" : "Habilitar"}
+                  </button>
+                  <button
+                    type="button"
+                    className="hostOptionBtn preview"
+                    onClick={() => handlePreviewListing(listing)}
+                  >
+                    Ver cómo quedaría
+                  </button>
+                  <button
+                    type="button"
+                    className="hostOptionBtn delete"
+                    onClick={() => handleDeleteListing(listing)}
+                  >
+                    Borrar
+                  </button>
+                </div>
+
+                {/* Acordeón de reseñas */}
+                <div className="hostReviewsAccordion">
+                  <button
+                    type="button"
+                    className="hostReviewsToggleBtn"
+                    onClick={() => toggleReviewsExpanded(listing.realId)}
+                  >
+                    <span>Opiniones de los huéspedes ({reviews.length})</span>
+                    <ChevronDown
+                      size={16}
+                      style={{
+                        transform: isReviewsExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s ease"
+                      }}
+                    />
+                  </button>
+
+                  {isReviewsExpanded && (
+                    <div className="hostReviewsList">
+                      {reviews.length > 0 ? (
+                        reviews.map((rev, rIdx) => (
+                          <div key={rIdx} className="hostReviewItem">
+                            <div className="hostReviewItemTop">
+                              <strong>{rev.booking?.user?.name || "Huésped"}</strong>
+                              <span>{"★".repeat(rev.rating || 5)}</span>
+                            </div>
+                            <p>{rev.comment || "Sin comentarios."}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="hostReviewsEmpty">Este alojamiento no tiene opiniones todavía.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -1175,7 +1406,7 @@ function HostDashboardPage() {
         dates: `${startStr} - ${endStr}`,
         listing: b.housing?.name || "Alojamiento",
         status: b.status || "pending",
-        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80"
+        avatar: getGenderedAvatar(b.user?.name)
       };
     });
 
@@ -1209,7 +1440,7 @@ function HostDashboardPage() {
           <div className="hostReservations">
             <div className="hostSectionHeader">
               <h2>Próximas reservas</h2>
-              <button type="button">Ver todo</button>
+              <button type="button" onClick={() => handleSidebarSelect("reservations")}>Ver todo</button>
             </div>
             <div className="hostReservationList">
               {upcomingBookings.length > 0 ? upcomingBookings.map((reservation) => (
@@ -1802,6 +2033,18 @@ function HostDashboardPage() {
               placeholder="Configuración de visibilidad"
             />
           </label>
+          <label style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+            Buscar ubicación por enlace de Google Maps o Coordenadas (lat, lng)
+            <input
+              type="text"
+              value={editGmapsInput}
+              onChange={(e) => handleGmapsLinkChange("edit", e.target.value)}
+              placeholder="Pegue aquí el enlace de Google Maps o coordenadas 'latitud, longitud' para autocompletar"
+            />
+            <small style={{ color: 'var(--host-soft)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+              Formatos soportados: Enlaces de Google Maps (con @lat,lng o q=lat,lng) o coordenadas (ej: 6.2442, -75.5748).
+            </small>
+          </label>
           <div className="hostFormRow" style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
             <label>
               Latitud
@@ -1809,7 +2052,11 @@ function HostDashboardPage() {
                 type="number"
                 step="any"
                 value={editListingForm.latitude || ""}
-                onChange={(event) => updateEditField("latitude", event.target.value)}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  updateEditField("latitude", val);
+                  setEditGmapsInput(`${val}, ${editListingForm.longitude}`);
+                }}
                 placeholder="Ej: 6.2442"
               />
             </label>
@@ -1819,7 +2066,11 @@ function HostDashboardPage() {
                 type="number"
                 step="any"
                 value={editListingForm.longitude || ""}
-                onChange={(event) => updateEditField("longitude", event.target.value)}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  updateEditField("longitude", val);
+                  setEditGmapsInput(`${editListingForm.latitude}, ${val}`);
+                }}
                 placeholder="Ej: -75.5748"
               />
             </label>
@@ -1834,6 +2085,7 @@ function HostDashboardPage() {
               onChange={(coords) => {
                 updateEditField("latitude", coords.lat);
                 updateEditField("longitude", coords.lng);
+                setEditGmapsInput(`${coords.lat}, ${coords.lng}`);
               }}
             />
           </div>
@@ -2214,6 +2466,18 @@ function HostDashboardPage() {
               placeholder="Configuración de visibilidad"
             />
           </label>
+          <label style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+            Buscar ubicación por enlace de Google Maps o Coordenadas (lat, lng)
+            <input
+              type="text"
+              value={newGmapsInput}
+              onChange={(e) => handleGmapsLinkChange("new", e.target.value)}
+              placeholder="Pegue aquí el enlace de Google Maps o coordenadas 'latitud, longitud' para autocompletar"
+            />
+            <small style={{ color: 'var(--host-soft)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+              Formatos soportados: Enlaces de Google Maps (con @lat,lng o q=lat,lng) o coordenadas (ej: 6.2442, -75.5748).
+            </small>
+          </label>
           <div className="hostFormRow" style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
             <label>
               Latitud
@@ -2221,7 +2485,11 @@ function HostDashboardPage() {
                 type="number"
                 step="any"
                 value={newListingForm.latitude || ""}
-                onChange={(event) => updateNewField("latitude", event.target.value)}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  updateNewField("latitude", val);
+                  setNewGmapsInput(`${val}, ${newListingForm.longitude}`);
+                }}
                 placeholder="Ej: 6.2442"
               />
             </label>
@@ -2231,7 +2499,11 @@ function HostDashboardPage() {
                 type="number"
                 step="any"
                 value={newListingForm.longitude || ""}
-                onChange={(event) => updateNewField("longitude", event.target.value)}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  updateNewField("longitude", val);
+                  setNewGmapsInput(`${newListingForm.latitude}, ${val}`);
+                }}
                 placeholder="Ej: -75.5748"
               />
             </label>
@@ -2246,6 +2518,7 @@ function HostDashboardPage() {
               onChange={(coords) => {
                 updateNewField("latitude", coords.lat);
                 updateNewField("longitude", coords.lng);
+                setNewGmapsInput(`${coords.lat}, ${coords.lng}`);
               }}
             />
           </div>
@@ -2420,35 +2693,7 @@ function HostDashboardPage() {
 
   const renderListingsEntry = () => {
     if (!listingAction) {
-      return (
-        <section className="hostListingChoiceWrap">
-          <header className="hostEditorHeader">
-            <p>Alojamientos</p>
-            <h1>¿Qué quieres hacer?</h1>
-            <span>Selecciona una opción antes de abrir los detalles del alojamiento.</span>
-          </header>
-
-          <div className="hostListingChoiceGrid">
-            <button
-              type="button"
-              className="hostListingChoiceCard"
-              onClick={() => setListingAction("edit-list")}
-            >
-              <h2>Editar alojamiento existente</h2>
-              <p>Abre una propiedad registrada y actualiza los detalles, las fotos o el precio.</p>
-            </button>
-
-            <button
-              type="button"
-              className="hostListingChoiceCard"
-              onClick={() => setListingAction("new")}
-            >
-              <h2>Registrar nuevo alojamiento</h2>
-              <p>Crea un perfil nuevo y empieza el proceso de publicación.</p>
-            </button>
-          </div>
-        </section>
-      );
+      return renderRegisteredListingsView();
     }
 
     return (
@@ -2457,10 +2702,10 @@ function HostDashboardPage() {
           type="button"
           className="hostBackToChoiceBtn"
           onClick={() => setListingAction(null)}
+          style={{ marginBottom: "20px" }}
         >
-          ← Cambiar acción
+          ← Volver a mis alojamientos
         </button>
-        {listingAction === "edit-list" ? renderRegisteredListingsView() : null}
         {listingAction === "edit" ? renderListingsView() : null}
         {listingAction === "new" ? renderNewListingView() : null}
       </>

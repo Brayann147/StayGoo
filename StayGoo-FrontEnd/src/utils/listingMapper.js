@@ -1,3 +1,5 @@
+import { getGenderedAvatar } from "./avatarHelper";
+
 const categoryMap = {
   Apartamento: "apartments",
   Cabaña: "cabins",
@@ -49,6 +51,14 @@ export function mapHousingToListing(item, index = 0) {
   const city = item.municipality || item.city || "Ciudad Desconocida";
   const address = item.address || "";
 
+  const hostName = Array.isArray(item.host)
+    ? item.host[0]?.name || "Anfitrión"
+    : item.host?.name || "Anfitrión";
+  const rawHostAvatar = Array.isArray(item.host)
+    ? item.host[0]?.avatar
+    : item.host?.avatar;
+  const hostAvatar = rawHostAvatar || getGenderedAvatar(hostName);
+
   return {
     id: String(item.id_housing),
     realId: item.id_housing,   // ← numérico, usado por getHousingById en StayDetailPage
@@ -66,12 +76,8 @@ export function mapHousingToListing(item, index = 0) {
     featured: index < 3,
     image: firstImage,
     housing_images: images,
-    hostName: Array.isArray(item.host)
-      ? item.host[0]?.name || "Anfitrión"
-      : item.host?.name || "Anfitrión",
-    hostAvatar: Array.isArray(item.host)
-      ? item.host[0]?.avatar || ""
-      : item.host?.avatar || "",
+    hostName,
+    hostAvatar,
     isSuperHost: true,
   };
 }
