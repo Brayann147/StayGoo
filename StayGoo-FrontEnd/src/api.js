@@ -242,6 +242,27 @@ export async function getHostBookings() {
   return request("/bookings/host");
 }
 
+/**
+ * Cancelar una reserva
+ * @param {string|number} id_booking
+ */
+export async function cancelBooking(id_booking) {
+  return request(`/bookings/${id_booking}/cancel`, { method: "PUT" });
+}
+
+/**
+ * Actualizar fechas de una reserva
+ * @param {string|number} id_booking
+ * @param {string} start_date  YYYY-MM-DD
+ * @param {string} end_date    YYYY-MM-DD
+ */
+export async function updateBookingDates(id_booking, start_date, end_date) {
+  return request(`/bookings/${id_booking}`, {
+    method: "PUT",
+    body: JSON.stringify({ start_date, end_date }),
+  });
+}
+
 // ── REVIEWS ────────────────────────────────────────────────────────────────────
 
 

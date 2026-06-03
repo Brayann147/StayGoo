@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Mail, Phone, MapPin, Calendar, Check, User } from "lucide-react";
 import { getMyProfile, getMyBookings } from "../api";
 import { useAuthUser } from "../useAuthUser";
+import { BookingDetailModal } from "./BookingDetailModal";
 
 export function ProfileSection({ profilePhoto }) {
   const authUser = useAuthUser();
@@ -18,9 +19,10 @@ export function ProfileSection({ profilePhoto }) {
 
   const [reservationHistory, setReservationHistory] = useState([]);
   const [editedData, setEditedData] = useState(userData);
+  const [selectedReservation, setSelectedReservation] = useState(null);
 
-  useEffect(() => {
-    async function loadData() {
+  const loadData = useCallback(async () => {
+
       try {
         setLoading(true);
         
@@ -67,6 +69,8 @@ export function ProfileSection({ profilePhoto }) {
                 title: housingInfo.name || "Alojamiento",
                 location: housingInfo.municipality || housingInfo.address || "Ubicación",
                 dates: `${new Date(b.start_date).toLocaleDateString()} - ${new Date(b.end_date).toLocaleDateString()}`,
+                rawStart: b.start_date?.split('T')[0] || "",
+                rawEnd: b.end_date?.split('T')[0] || "",
                 totalPrice: b.total_price ? `$${Number(b.total_price).toLocaleString()}` : "N/A",
                 totalNights: nights,
                 image: normalImg?.image_url || "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=400&q=80",
@@ -83,9 +87,11 @@ export function ProfileSection({ profilePhoto }) {
       } finally {
         setLoading(false);
       }
-    }
-    loadData();
   }, [authUser.name, authUser.email]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleSave = () => {
     setUserData(editedData);
@@ -283,6 +289,12 @@ export function ProfileSection({ profilePhoto }) {
                           {reservation.totalNights} nights
                         </span>
                       </div>
+                      <button
+                        className="verDetallesBtn"
+                        onClick={() => setSelectedReservation(reservation)}
+                      >
+                        Ver detalles
+                      </button>
                     </div>
                   </article>
                 ))}
@@ -324,6 +336,12 @@ export function ProfileSection({ profilePhoto }) {
                           </span>
                         )}
                       </div>
+                      <button
+                        className="verDetallesBtn"
+                        onClick={() => setSelectedReservation(reservation)}
+                      >
+                        Ver detalles
+                      </button>
                     </div>
                   </article>
                 ))}
@@ -336,6 +354,14 @@ export function ProfileSection({ profilePhoto }) {
           )}
         </section>
       </div>
+
+      {selectedReservation && (
+        <BookingDetailModal
+          reservation={selectedReservation}
+          onClose={() => setSelectedReservation(null)}
+          onUpdated={() => { setSelectedReservation(null); loadData(); }}
+        />
+      )}
     </div>
   );
 }
