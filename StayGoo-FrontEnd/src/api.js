@@ -394,8 +394,44 @@ export async function fetchCitiesByDepartment(countryCode, adminCode1) {
     return [];
   }
 }
+/**
+ * Obtener reseñas de un alojamiento.
+ * Llama directamente a Supabase REST para evitar el backend de Render.
+ */
 export async function getReviewsByHousing(housingId) {
-  return request(`/reviews/housing/${housingId}`, { public: true });
+  const SUPABASE_URL = "https://qgsqhczniickikrdlrmb.supabase.co";
+  const SUPABASE_ANON = "sb_publishable_7-DL_6Ymj8LtY4ojyV6yCw_bGezGeNq";
+
+  // Paso 1: obtener ids de bookings para ese housing
+  const bookingsRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/booking?select=id_booking&id_housing=eq.${housingId}`,
+    {
+      headers: {
+        "apikey": SUPABASE_ANON,
+        "Authorization": `Bearer ${SUPABASE_ANON}`,
+        "Accept": "application/json"
+      }
+    }
+  );
+  if (!bookingsRes.ok) return [];
+  const bookings = await bookingsRes.json();
+  if (!bookings.length) return [];
+
+  const bookingIds = bookings.map(b => b.id_booking).join(",");
+
+  // Paso 2: obtener reviews de esos bookings con datos del usuario
+  const reviewsRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/review?select=*,booking:id_booking(id_booking,id_housing,id_user,start_date,end_date,user:id_user(name,email))&id_booking=in.(${bookingIds})&order=date.desc`,
+    {
+      headers: {
+        "apikey": SUPABASE_ANON,
+        "Authorization": `Bearer ${SUPABASE_ANON}`,
+        "Accept": "application/json"
+      }
+    }
+  );
+  if (!reviewsRes.ok) return [];
+  return await reviewsRes.json();
 }
 
 export async function createReview(reviewData) {
@@ -404,4 +440,3 @@ export async function createReview(reviewData) {
     body: JSON.stringify(reviewData),
   });
 }
-
