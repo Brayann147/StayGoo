@@ -5,7 +5,8 @@ import {
     cancelBooking,
     updateBooking,
     getMyBookings,
-    getHostBookings
+    getHostBookings,
+    getBookingsByHousing
 } from '../controllers/booking.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
 
@@ -16,6 +17,9 @@ router.get('/me', authenticate, getMyBookings);
 
 // GET /api/bookings/host  → Consultar las reservas que han hecho a mis alojamientos (protegido)
 router.get('/host', authenticate, getHostBookings);
+
+// GET /api/bookings/housing/:id_housing  → Fechas bloqueadas (público)
+router.get('/housing/:id_housing', getBookingsByHousing);
 
 // POST /api/bookings  → Crear reserva (protegido)
 router.post('/', authenticate, createBooking);

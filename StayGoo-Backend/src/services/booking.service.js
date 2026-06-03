@@ -107,3 +107,14 @@ export const updateBooking = async (id_booking, { start_date, end_date }) => {
     if (error) throw error;
     return data;
 };
+
+// Consultar reservas activas de un alojamiento (para bloquear fechas en el calendario)
+export const getBookingsByHousing = async (id_housing) => {
+    const { data, error } = await supabase
+        .from('booking')
+        .select('start_date, end_date, status')
+        .eq('id_housing', id_housing)
+        .in('status', ['confirmed', 'pending']);
+    if (error) throw error;
+    return data;
+};

@@ -56,6 +56,17 @@ export const getHostBookings = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+// GET /api/bookings/housing/:id_housing  → Fechas bloqueadas de un alojamiento (público)
+export const getBookingsByHousing = async (req, res) => {
+    try {
+        const { id_housing } = req.params;
+        const data = await bookingService.getBookingsByHousing(id_housing);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // PUT /api/bookings/:id_booking  → Actualizar fechas de reserva
 export const updateBooking = async (req, res) => {
     try {
